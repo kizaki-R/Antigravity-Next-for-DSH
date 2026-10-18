@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Antigravity Next",
+    "description": "從零打造的 Antigravity / Cloud Code Assist 模型供應商。註冊「agy-next」路由，因此可與官方 dsh-antigravity 並存；內建重新實測過的模型清單，並可透過設定調整逾時、路由與憑證路徑。不內建 Google 的 OAuth 憑證，需自備。"
+  }
+}

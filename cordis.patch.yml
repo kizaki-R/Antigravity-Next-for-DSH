@@ -1,0 +1,29 @@
+# agy-next bundle patch layer.
+#
+# Installing this package only makes it a dependency of the profile; this file
+# is what actually creates a loader row for it. Without `dsh.bundle.patch` in
+# package.json the host reports:
+#
+#   dsh: warning: agy-next declares no dsh.bundle
+#              — installed as a plain dependency, not a profile layer
+#
+# and the plugin never loads.
+#
+# The host half is the model provider: `apply()` calls
+# `ctx.llm.registerAdapter([PROVIDER], adapter)`. There is no browser half, so
+# no `dsh.client` block is declared — the model picker reads the provider list
+# from the host's llm service.
+- insert:
+    - id: agy-next
+      name: agy-next
+      # Empty config: every field in lib/config.js has a schema default, so the
+      # row can ship without inventing values. Override individual keys here or
+      # in the profile's cordis.yml to tune without editing code, e.g.
+      #
+      #   config:
+      #     streamIdleTimeoutMs: 600000
+      #     projectId: aicode-consumers
+      #
+      # Secrets stay cordis-native: point a field at the environment with
+      # `!!js process.env.X` rather than reading a key file in code.
+      config: {}

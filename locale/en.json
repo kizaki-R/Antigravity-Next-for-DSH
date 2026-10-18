@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Antigravity Next",
+    "description": "A from-scratch Antigravity / Cloud Code Assist model provider for DeepSeek Harness. Registers the \"agy-next\" route so it can run alongside the official dsh-antigravity plugin, with a re-verified model catalog and configurable timeouts, routing and credential paths. Bring your own Google OAuth client."
+  }
+}

@@ -1,0 +1,15 @@
+# Normalize line endings so a Windows checkout and a Linux/macOS checkout
+# produce byte-identical files. Every source file in this package is authored
+# with LF; without this, Git's autocrlf would rewrite them to CRLF on checkout
+# and the published tarball would differ from the repository.
+* text=auto eol=lf
+
+# Files that must never be normalized.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.tgz binary
+*.zst binary

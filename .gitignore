@@ -1,0 +1,37 @@
+# --- dependencies -----------------------------------------------------------
+node_modules/
+.pnpm-store/
+
+# --- build / pack output ----------------------------------------------------
+dist/
+*.tgz
+*.tar.gz
+
+# --- credentials: NEVER commit these ----------------------------------------
+# The plugin stores secrets under <DSH_HOME>/storages, not in this repo, but
+# these patterns are a second line of defence against a stray copy landing here.
+agy-next-oauth.json
+agy-next-oauth-client.json
+antigravity-oauth*.json
+credentials*.json
+*.token
+.env
+.env.*
+
+# --- local scratch ----------------------------------------------------------
+*.log
+npm-debug.log*
+*.tmp
+*.bak
+backup-*/
+_agy-check/
+.verify/
+.tmp/
+
+# --- editors / OS -----------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
