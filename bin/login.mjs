@@ -20,6 +20,7 @@ import { MissingClientError, clientConfigured, clientId, clientSecret } from "..
 import { clientFilePath, readClientFile, writeClientFile } from "../lib/client-config.js";
 import { pickLocale, t } from "../lib/i18n.js";
 import { runSetupGuide } from "../lib/setup-guide.js";
+import { probeApiReachable, adviceFor } from "../lib/setup-probe.js";
 
 function log(message = "") {
   output.write(`${message}\n`);
@@ -187,6 +188,34 @@ async function main() {
   log(`account:   ${email ?? "<unknown>"}`);
   log(`projectId: ${projectId ?? "<not discovered; will retry at request time>"}`);
   log(`written:   ${await credentialPath()}`);
+
+  /* Verify the API actually answers before declaring success.
+     Enabling the API is the step people skip, and skipping it still lets login
+     succeed — the failure only shows up later as a 403 on every model call,
+     with nothing pointing back to the cause. Probing here turns that silent trap
+     into an instruction while the user still has the console open. */
+  log("");
+  log(t(locale, "guide.probe.running"));
+  const probe = await probeApiReachable(credential.access);
+  const { advice } = adviceFor(probe.outcome);
+  if (advice === "ok") {
+    log(t(locale, "guide.probe.ok"));
+  } else {
+    // Both 403 causes mention the consent screen, because a first-time user who
+    // skipped step 2 and one who skipped adding themselves as a test user look
+    // identical from here.
+    if (advice === "enable-api") {
+      for (const l of t(locale, "guide.probe.enableApi")) log(`  ${l}`);
+      for (const l of t(locale, "guide.probe.checkTestUser")) log(`  ${l}`);
+    } else if (advice === "login-again") {
+      log(`  ${t(locale, "guide.probe.loginAgain")}`);
+    } else if (advice === "retry") {
+      log(`  ${t(locale, "guide.probe.retry")}`);
+    } else {
+      log(`  ${t(locale, "guide.probe.unknown")} (HTTP ${probe.status ?? "?"})`);
+    }
+  }
+
   log("");
   log("Restart the profile (or reload the host) so the provider picks this up.");
   return 0;
