@@ -76,8 +76,12 @@ expire.
 
 ## Log in
 
+Run these from the `agy-next` package directory (the one with `package.json`).
+This checkout is not published to npm, so `npx agy-next-login` would hit the
+public registry and 404.
+
 ```bash
-npx agy-next-login
+npm run login
 ```
 
 The first run walks you through supplying your OAuth client, then opens your
@@ -85,9 +89,9 @@ browser for Google sign-in. The credential is written to
 `<DSH_HOME>/storages/agy-next-oauth.json`.
 
 ```bash
-npx agy-next-login --status    # account, project, expiry, OAuth client status
-npx agy-next-login --force     # replace the existing login
-npx agy-next-login --logout    # delete the stored credential
+npm run login -- --status    # account, project, expiry, OAuth client status
+npm run login -- --force     # replace the existing login
+npm run login -- --logout    # delete the stored credential
 ```
 
 If you already use the official `dsh-antigravity` plugin, `agy-next` will import
@@ -142,7 +146,7 @@ Each credential file holds one account. To keep several, point
 in:
 
 ```bash
-AGY_NEXT_CREDENTIAL_PATH=~/.dsh/storages/agy-next-oauth-work.json npx agy-next-login
+AGY_NEXT_CREDENTIAL_PATH=~/.dsh/storages/agy-next-oauth-work.json npm run login
 ```
 
 The login command accepts `--force` so a stored credential never blocks a second

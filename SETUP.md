@@ -42,9 +42,18 @@ Pick **one** of these. Precedence is: config → file → environment.
 
 ### a) Let the login command save them (easiest)
 
+Run this from the `agy-next` package directory (the directory containing
+`package.json`):
+
 ```bash
-npx agy-next-login
+npm run login
 ```
+
+For a local DSH profile install on Windows, the package is normally linked at
+`$env:USERPROFILE\\.dsh\\profiles\\desktop\\node_modules\\agy-next`. Open PowerShell,
+run `cd "$env:USERPROFILE\\.dsh\\profiles\\desktop\\node_modules\\agy-next"`, then
+`npm run login`. This checkout is not published to npm, so `npx agy-next-login`
+tries the public registry and returns 404.
 
 On first run it prints the walkthrough and asks for the pair, then saves them to
 `<DSH_HOME>/storages/agy-next-oauth-client.json` with owner-only permissions.
@@ -86,10 +95,10 @@ In your profile's `cordis.patch.yml`:
 ## 5. Log in
 
 ```bash
-npx agy-next-login          # first login
-npx agy-next-login --status # what is configured right now
-npx agy-next-login --force  # replace an existing login
-npx agy-next-login --logout # delete the stored credential
+npm run login                  # first login
+npm run login -- --status      # what is configured right now
+npm run login -- --force       # replace an existing login
+npm run login -- --logout      # delete the stored credential
 ```
 
 ## Where your secrets live
@@ -112,7 +121,7 @@ A refresh token is bound to the client that issued it. If you change
 `clientId`, the stored refresh token stops working and you must log in again:
 
 ```bash
-npx agy-next-login --force
+npm run login -- --force
 ```
 
 ## Troubleshooting
