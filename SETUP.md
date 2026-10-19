@@ -20,10 +20,15 @@ unusual. Supplying your own client means your traffic is yours alone.
 
 Open <https://console.cloud.google.com/projectcreate>, give it a name, create it.
 
-## 2. Enable the Cloud Code Assist API
+## 2. Enable the Gemini for Google Cloud API
 
-Open <https://console.cloud.google.com/apis/library/cloudcode-pa.googleapis.com>
+Open <https://console.cloud.google.com/marketplace/product/google/cloudaicompanion.googleapis.com>
 and press **Enable** for the project you just created.
+
+You are looking for **Gemini for Google Cloud**. Do not search for "Cloud Code
+Assist": that names Google's internal backend service, it has no entry in the
+API library, and searching for it returns nothing. Enabling the companion API
+below is what grants access to that backend.
 
 ## 3. Create an OAuth client
 
@@ -130,6 +135,6 @@ npm run login -- --force
 |---|---|
 | `no OAuth client configured` | None of the four places above is set. |
 | `Token exchange failed (400): invalid_client` | The id/secret pair is wrong or from a different project. |
-| `Token exchange failed (403): access_denied` | Cloud Code Assist API not enabled, or your account is not a test user on the consent screen. |
+| `Token exchange failed (403): access_denied` | Gemini for Google Cloud API not enabled, or your account is not a test user on the consent screen. |
 | `no refresh_token` | You previously granted access; revoke it at <https://myaccount.google.com/permissions> and log in again. |
 | Login works but requests 403 | The API is enabled on a different project than the client belongs to. |
