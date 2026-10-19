@@ -180,6 +180,19 @@ resolver ignores it.
   `experimentsandconfigs`) are Google's internal Cloud Code Assist scopes. Using
   them against a personal OAuth client is not an arrangement Google documents or
   endorses; it works today and may stop working at any time.
+- **A self-made OAuth client is rejected for these scopes.** Walking the setup
+  flow end to end on 2026-10-20 produced `Error 400: invalid_scope` with
+  "Some requested scopes cannot be shown" for
+  `https://www.googleapis.com/auth/aicode`. `aicode`, `cclog` and
+  `experimentsandconfigs` are private to Google's own clients and cannot be
+  granted to a client a user creates in the console. The three public scopes
+  (`cloud-platform`, `userinfo.email`, `userinfo.profile`) are not enough for the
+  `cloudcode-pa` endpoints.
+  The official `dsh-antigravity` plugin keeps working because it ships Google's
+  own client id, which is already granted them.
+  Consequence: the "bring your own OAuth client" route is blocked today for
+  quota and completion. Any future plan has to either obtain access through a
+  client Google already granted, or move to an endpoint whose scopes are public.
 - This is an unofficial, community project. It is not affiliated with, endorsed
   by, or supported by Google or DeepSeek.
 - Endpoint selection favours the production host and falls back to the sandbox
