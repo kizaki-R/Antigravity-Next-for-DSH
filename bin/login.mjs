@@ -86,7 +86,9 @@ async function main() {
   const store = new CredentialStore();
 
   if (args.has("--status") || args.has("--whoami")) {
-    const own = await store.read();
+    // Both are read-only: --status reports what exists, it never migrates the
+    // official plugin's login into agy-next's file as a side effect.
+    const own = await store.peek();
     const legacy = await store.readLegacy();
     log(`agy-next credential file: ${await store.path()}`);
     log(`  present: ${own ? "yes" : "no"}`);
@@ -105,14 +107,26 @@ async function main() {
       log("\nNo credential available. Run without --status to log in.");
       return configured ? 0 : 1;
     }
+    if (CredentialStore.isImported(credential)) {
+      // The official plugin's file stores refresh tokens only. A refresh token
+      // is bound to the OAuth client that issued it, and that client is not in
+      // the file, so this login cannot be renewed or used for quota until the
+      // user supplies their own client.
+      log("\nnote: this credential was imported from the official dsh-antigravity file.");
+      log("      It carries a refresh token but no OAuth client, so it cannot be refreshed");
+      log("      here. Supply your own client (see SETUP.md) and log in again.");
+    }
     log(`\naccount:   ${credential.email ?? "<unknown>"}`);
     log(`projectId: ${credential.projectId ?? "<not discovered>"}`);
     log(`expires:   ${credential.expires ? new Date(credential.expires).toISOString() : "<unknown>"}`);
-
+    if (credential.importedFrom) log(`imported:  from ${credential.importedFrom} (refresh token only; no OAuth client)`);
     if (needsRefresh(credential)) {
       log("\naccess token is expired; verifying the refresh token now...");
       if (!configured) {
-        log("cannot verify: no OAuth client configured (the refresh token is bound to it).");
+        log("cannot verify: no OAuth client is configured.");
+        log("  the refresh token is bound to the client that issued it, so it can only be");
+        log("  renewed with that same client. Set up your own client (SETUP.md) and run:");
+        log("    npm run login -- --force");
         return 1;
       }
       try {
@@ -162,6 +176,10 @@ async function main() {
     ...credential,
     email,
     ...(projectId ? { projectId } : {}),
+    // This login went through ensureClient(), so a client exists and the refresh
+    // token is bound to it. The marker lets status tell this apart from an
+    // account imported from the official plugin, which has no client.
+    clientRecorded: true,
   };
   await store.write(record);
 
