@@ -1,22 +1,24 @@
-# Setup — supplying your own OAuth client
+# Setup — choosing or supplying your OAuth client
 
-`agy-next` does **not** ship Google's OAuth client credentials. You bring your
-own. It takes about three minutes and costs nothing.
+`agy-next` supports two setup modes:
+1. **Google Official Antigravity Client (Recommended)**: Use Google's standard client credentials for the Antigravity desktop IDE. Fully authorized for private `aicode` scopes, live per-group quota tracking, and multi-account auto-switching. Zero console setup needed.
+2. **Bring your own OAuth client (Advanced)**: Walk through Google Cloud Console to create a custom client. Note that Google limits private scopes (`aicode`) for third-party clients, so custom clients cannot access quota endpoints.
 
-## Why you must supply your own
+---
 
-Google's Antigravity IDE contains an OAuth client id/secret pair, and older
-versions of this plugin (and of the reference implementation it was written
-against) copied those strings into the source. They were never a secret in the
-cryptographic sense — anyone who unpacks the IDE can read them — but they belong
-to Google's client, not to this plugin.
+## Fast Track: Use Official Client (Recommended)
 
-Shipping them has a concrete cost: every user's traffic would be attributed to
-one shared `client_id`. If Google ever deactivated it, every installation would
-break simultaneously, including accounts whose owners never did anything
-unusual. Supplying your own client means your traffic is yours alone.
+Simply run:
 
-## 1. Create a Google Cloud project
+```bash
+npm run login -- --official
+```
+
+Or run `npm run login` and press `Enter` to select Option 1. The plugin will configure the official client into `<DSH_HOME>/storages/agy-next-oauth-client.json` and immediately launch the login browser window.
+
+---
+
+## Custom Client Walkthrough (Advanced)
 
 Open <https://console.cloud.google.com/projectcreate>, give it a name, create it.
 

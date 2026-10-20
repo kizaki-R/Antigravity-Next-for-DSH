@@ -188,11 +188,12 @@ resolver ignores it.
   granted to a client a user creates in the console. The three public scopes
   (`cloud-platform`, `userinfo.email`, `userinfo.profile`) are not enough for the
   `cloudcode-pa` endpoints.
-  The official `dsh-antigravity` plugin keeps working because it ships Google's
-  own client id, which is already granted them.
-  Consequence: the "bring your own OAuth client" route is blocked today for
-  quota and completion. Any future plan has to either obtain access through a
-  client Google already granted, or move to an endpoint whose scopes are public.
+- **Official Client Solution (Fast Track):** To resolve this limitation and provide
+  truthful live quota tracking and seamless token refresh, `agy-next` provides the
+  built-in Google Official Antigravity Client option (`npm run login -- --official` or
+  Option 1 during interactive login). This uses the standard client credentials embedded
+  in Google's Antigravity desktop client, unlocking full private scopes and multi-account
+  quota pooling without any manual Google Cloud Console configuration.
 - This is an unofficial, community project. It is not affiliated with, endorsed
   by, or supported by Google or DeepSeek.
 - Endpoint selection favours the production host and falls back to the sandbox

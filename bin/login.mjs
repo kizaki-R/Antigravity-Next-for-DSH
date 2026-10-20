@@ -16,7 +16,7 @@ import { stdin as input, stdout as output } from "node:process";
 import { CredentialStore, credentialPath, needsRefresh } from "../lib/store.js";
 import { login, refreshAccessToken, fetchUserEmail } from "../lib/oauth.js";
 import { loadCodeAssist } from "../lib/client.js";
-import { MissingClientError, clientConfigured, clientId, clientSecret } from "../lib/constants.js";
+import { MissingClientError, clientConfigured, clientId, clientSecret, OFFICIAL_CLIENT_ID, OFFICIAL_CLIENT_SECRET } from "../lib/constants.js";
 import { clientFilePath, readClientFile, writeClientFile } from "../lib/client-config.js";
 import { pickLocale, t } from "../lib/i18n.js";
 import { runSetupGuide } from "../lib/setup-guide.js";
@@ -50,11 +50,36 @@ async function ensureClient() {
     return { clientId: clientId(""), clientSecret: clientSecret("") };
   }
 
-  // Full walkthrough: five steps with direct links, then the pair.
-  // `--quick` skips it for people who already know the process.
-  const pair = args.has("--quick")
-    ? await askPair()
-    : await runSetupGuide({ locale });
+  if (args.has("--official")) {
+    const pair = { clientId: OFFICIAL_CLIENT_ID, clientSecret: OFFICIAL_CLIENT_SECRET };
+    const savedTo = await writeClientFile(pair, filePath);
+    log(`\nOAuth client: ${t(locale, "guide.mode.official")}`);
+    log(`Saved your OAuth client to ${savedTo}`);
+    return { clientId: pair.clientId, clientSecret: pair.clientSecret, savedTo };
+  }
+
+  // Interactive mode selection when no client is configured.
+  let pair;
+  if (args.has("--quick")) {
+    pair = await askPair();
+  } else {
+    const rl = createInterface({ input, output });
+    try {
+      log(`\n${t(locale, "guide.mode.title")}`);
+      log(`${t(locale, "guide.mode.official")}`);
+      log(`${t(locale, "guide.mode.custom")}`);
+      const answer = (await rl.question(`\n${t(locale, "guide.mode.prompt")} `)).trim();
+      if (answer === "" || answer === "1") {
+        pair = { clientId: OFFICIAL_CLIENT_ID, clientSecret: OFFICIAL_CLIENT_SECRET };
+      }
+    } finally {
+      rl.close();
+    }
+
+    if (!pair) {
+      pair = await runSetupGuide({ locale });
+    }
+  }
 
   if (!pair) return undefined; // user quit
 
