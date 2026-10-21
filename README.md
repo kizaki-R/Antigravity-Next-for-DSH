@@ -196,9 +196,10 @@ resolver ignores it.
   quota pooling without any manual Google Cloud Console configuration.
 - This is an unofficial, community project. It is not affiliated with, endorsed
   by, or supported by Google or DeepSeek.
-- Endpoint selection favours the production host and falls back to the sandbox
-  host; when the production host is unavailable the first request of a turn pays
-  roughly a second of extra latency.
+- Endpoint selection prioritises Google's official Antigravity daily host
+  (`https://daily-cloudcode-pa.googleapis.com`) to align quota numbers with the
+  IDE and ensure reliable throughput, falling back to standard production and
+  sandbox hosts when unavailable.
 
 ## License
 
