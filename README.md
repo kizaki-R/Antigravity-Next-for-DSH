@@ -200,6 +200,14 @@ resolver ignores it.
   (`https://daily-cloudcode-pa.googleapis.com`) to align quota numbers with the
   IDE and ensure reliable throughput, falling back to standard production and
   sandbox hosts when unavailable.
+- **Argon weekly quota:** requests use the official App subclient User-Agent
+  (`antigravity/hub/2.25.0 (...)`). Without `hub/`, Google may return a legacy
+  model/quota cohort that omits Argon even for an eligible account. Every account
+  is queried directly using its own OAuth token; the Antigravity App does not
+  need to be running. The settings page shows Argon as a separate weekly-only
+  column when Google returns `gemini-argon-wtu-weekly`. A missing bucket is
+  unknown/unreported, not zero usage, full quota, or proof of ineligibility.
+  Run `node bin/test-quota-direct.mjs` for the offline request regression check.
 
 ## License
 
