@@ -1,136 +1,116 @@
 # agy-next
 
-A from-scratch Google Antigravity / Cloud Code Assist model provider for
-[DeepSeek Harness](https://deepseek.com/harness/) (DSH).
+An unofficial Google Antigravity / Cloud Code Assist model provider for
+[DeepSeek Harness](https://deepseek.com/harness/) (DSH). It registers the
+`agy-next` provider id and can coexist with other providers.
 
-It registers the `agy-next` provider id, so it can live alongside other
-Antigravity providers in the same profile without colliding.
-
-## What it does
-
-- Streams Gemini, Claude, and GPT-OSS models served by Google's Cloud Code Assist
-  backend, with thinking/reasoning surfaced as `reasoning-delta` chunks.
-- Maps thinking budget to each model's effort levels (`low` / `medium` / `high`,
-  plus `off` to suppress thought output).
-- Honest token accounting: thinking tokens are counted in `outputTokens` when
-  they are streamed, so the host's tokens/second readout covers the same span it
-  timed instead of silently under-reporting.
-- Keeps its credential file separate from other Antigravity plugins and never
-  writes to theirs.
+**This is an unofficial local integration, not affiliated with, endorsed by,
+or officially supported by Google or DeepSeek.** Local client discovery does
+not establish permission to use Google's services or guarantee account access.
 
 ## Requirements
 
-- DSH `>=0.1.5-rc.1 <0.3.0`
-- Node `>=20`
-- **Your own Google OAuth client** — this plugin does not ship one.
-  See [SETUP.md](SETUP.md); it takes about three minutes.
+- DSH `>=0.1.5-rc.1 <0.3.0` and Node `>=20`.
+- The official AGY desktop application installed locally. Download it from
+  <https://antigravity.google/product/antigravity-2>.
+- A Google account that can complete browser consent and access the requested
+  services. Model availability and quota depend on the account and upstream API.
+
+The plugin resolves the OAuth client from the installed application's resources
+on your machine. It does **not** bundle client values, start AGY, or read AGY's
+accounts, tokens, or account database as part of discovery. AGY does not need to
+be running. Account tokens are obtained separately through Google's browser
+consent flow; installing AGY does not automatically sign you in to this plugin.
+
+Windows is the current local validation target. macOS/Linux detection is planned;
+do not treat either as verified support until separately confirmed.
 
 ## Install
 
-```bash
-dsh plugin --profile <profile> add agy-next
-```
-
-Then add it to the plugin list in `<profile>/package.json`:
-
-```json
-{
-  "dsh": {
-    "profile": {
-      "bundles": ["...", "agy-next"]
-    }
-  }
-}
-```
-
-Restart DSH (or reload the host) so the provider registers.
-
-From a checkout instead of the registry:
+For a local checkout, add the package to your DSH profile:
 
 ```bash
-dsh plugin --profile <profile> add github:USER/agy-next
-# or
 dsh plugin --profile <profile> add link:/absolute/path/to/agy-next
 ```
 
-## Settings page
+Include `agy-next` in the profile's `dsh.profile.bundles` list, then restart DSH
+or reload the host. Run CLI commands from the package directory; this checkout
+is not a claim that the same version has been published to npm.
 
-After the restart, **Settings → AGY-Next** shows what the plugin is actually
-doing:
+See [SETUP.md](SETUP.md) for installation discovery and troubleshooting.
 
-| Section | What it tells you |
-|---|---|
-| OAuth client | whether one is configured, and where it was found (file, env, plugin config) |
-| Sign-in | account email, Cloud Code Assist project, and how long the access token has left |
-| Requested scopes | the six scopes this provider asks Google for |
-| Models | the twelve model ids the picker exposes, with context size |
+## Local installation discovery
 
-It also carries the operations: **Sign in** starts the OAuth flow and opens your
-browser, **Sign in again** replaces the current credential, and **Sign out**
-deletes it. The page re-reads itself every two seconds while an approval is
-outstanding, so it flips to "signed in" without a reload.
+Standard installation locations are checked locally. If detection fails or you
+use a nonstandard installation, set `AGY_NEXT_INSTALL_PATH` to your official AGY
+installation path in the environment of the process running DSH or the CLI.
+For example, in PowerShell before launching the CLI:
 
-Everything the page shows comes from `/agy-next/api/*` on the host. The page
-never receives a token or a secret — only whether they exist and when they
-expire.
-
-## Log in
-
-Run these from the `agy-next` package directory (the one with `package.json`).
-This checkout is not published to npm, so `npx agy-next-login` would hit the
-public registry and 404.
-
-```bash
+```powershell
+$env:AGY_NEXT_INSTALL_PATH = 'C:\path\to\Antigravity'
 npm run login
 ```
 
-The first run walks you through supplying your OAuth client, then opens your
-browser for Google sign-in. The credential is written to
-`<DSH_HOME>/storages/agy-next-oauth.json`.
+For the GUI, set the variable before launching DSH, restart DSH if necessary,
+then refresh the settings page. Do not point it at an account folder or a JSON
+file containing OAuth credentials.
+
+The local resolver is read-only: it does not save the resolved pair to a client
+file, rewrite account records, or migrate existing tokens. The obsolete
+`clientId`, `clientSecret`, and `clientPath` config fields remain accepted for
+compatibility but are **ignored**. Client JSON files and `AGY_NEXT_CLIENT_*` /
+`ANTIGRAVITY_CLIENT_*` client-pair environment variables are also ignored. They
+cannot bypass the installation requirement. Do not create a custom Google Cloud
+OAuth client for this flow.
+
+## Sign in
+
+Use **Settings → AGY-Next → Sign in / Add account**, or run:
 
 ```bash
-npm run login -- --status    # account, project, expiry, OAuth client status
-npm run login -- --force     # replace the existing login
-npm run login -- --logout    # delete the stored credential
+npm run login
+npm run login -- --status
+npm run login -- --force
+npm run login -- --logout
 ```
 
-If you already use the official `dsh-antigravity` plugin, `agy-next` will import
-its login on first use — read-only; it never writes to that file.
+After the local client is resolved, Google browser consent obtains the account's
+tokens. CLI `--force` replaces the existing login; `--logout` deletes the stored
+credential. Those are account operations, not part of client discovery.
 
-## Models
+Tokens remain in the plugin's own credential store, by default
+`<DSH_HOME>/storages/agy-next-oauth.json`; `credentialPath` or
+`AGY_NEXT_CREDENTIAL_PATH` can override it. This store is separate from the AGY
+application's account storage. Existing legacy `dsh-antigravity` import behavior
+is separate from client discovery and does not write to that plugin's file.
+A token issued to a different OAuth client may require signing in again. The
+plugin does not silently convert it to a new client or edit its binding.
 
-| id | context | max output | efforts |
-|---|---|---|---|
-| `gemini-3.8-flash` | 1,048,576 | 65,536 | low, medium, high |
-| `gemini-3-flash` | 1,048,576 | 65,536 | low, medium, high |
-| `gemini-3.1-flash-image` | 1,048,576 | 65,536 | low, medium, high |
-| `gemini-3.1-flash-lite` | 1,048,576 | 65,536 | low, medium, high |
-| `gemini-3.5-flash-lite` | 1,048,576 | 65,536 | low, medium, high |
-| `gemini-2.5-pro` | 1,048,576 | 65,536 | low, high |
-| `gemini-2.5-flash` | 1,048,576 | 65,536 | low, medium, high |
-| `gemini-2.5-flash-lite` | 1,048,576 | 65,536 | low, medium, high |
-| `gemini-2.5-flash-thinking` | 1,048,576 | 65,536 | low, high |
-| `claude-sonnet-4-6` | 200,000 | 64,000 | high |
-| `claude-opus-4-6` | 250,000 | 64,000 | high |
-| `gpt-oss-120b` | 128,000 | 32,768 | medium |
+## Settings page
 
-The backend's catalog changes without notice. Re-verify with:
+| Section | What it shows |
+|---|---|
+| Local AGY installation | Resolution readiness, source, installation path and app version when available |
+| Account pool | Account identities, current account, quota and switching controls |
+| Requested scopes | The permissions requested during Google consent |
+| Models | The provider's current model roster and visibility controls |
 
-```bash
-npm run sweep
-```
+The OAuth status UI displays safe installation metadata only, never client
+values or account tokens. A discovered installation is not necessarily a
+readable client: unsupported resource formats or unreadable files keep sign-in
+disabled until resolution succeeds. A missing installation links to the official
+download and explains `AGY_NEXT_INSTALL_PATH`.
+
+The page uses `/agy-next/api/*`. **The overall status endpoint is not a read-only
+audit tool:** existing account import, token refresh and account maintenance may
+write the plugin's credential store. Only local client discovery is read-only.
 
 ## Configuration
-
-Every value can be set in `cordis.patch.yml` rather than edited in code:
 
 ```yaml
 - id: agy-next
   name: agy-next
   config:
-    clientId: ""                     # your OAuth client; see SETUP.md
-    clientSecret: ""
-    clientPath: ""                   # default <DSH_HOME>/storages/agy-next-oauth-client.json
     credentialPath: ""               # default <DSH_HOME>/storages/agy-next-oauth.json
     streamIdleTimeoutMs: 300000
     discoveryTimeoutMs: 8000
@@ -139,80 +119,58 @@ Every value can be set in `cordis.patch.yml` rather than edited in code:
     projectId: ""                    # override Cloud Code Assist project
 ```
 
-## Multiple accounts
+Use `AGY_NEXT_INSTALL_PATH` for installation discovery. Deprecated client-pair
+config fields are intentionally omitted above because their values are ignored.
 
-Each credential file holds one account. To keep several, point
-`credentialPath` at a different file per profile, or swap files before logging
-in:
+## Models, accounts and quotas
 
-```bash
-AGY_NEXT_CREDENTIAL_PATH=~/.dsh/storages/agy-next-oauth-work.json npm run login
-```
-
-The login command accepts `--force` so a stored credential never blocks a second
-account from being added elsewhere.
+- Gemini, Claude and GPT-OSS availability follows Google's backend and each
+  account's model list; no installation or sign-in guarantees a specific model.
+- Reasoning effort maps to backend variants. Thinking tokens are included in
+  streamed output accounting.
+- Multiple accounts, standby switching and visibility controls use the existing
+  plugin credential store; no AGY account-store modification is required.
+- Subscription badges use each account's `loadCodeAssist` response, not its model
+  roster or quota. Unknown/unavailable results remain unknown. Positive results
+  are cached per token in memory for five minutes, not persisted as account-plan
+  metadata. The endpoint does not explain billing promotions or staged rollouts.
+- Gemini 4 Argon uses its Low/Medium/High runtime variants. Argon weekly quota
+  appears separately when Google reports it. An absent bucket means unreported,
+  not zero quota or proof of ineligibility. Quota calls use each account's own
+  token; AGY does not need to be running.
+- Structured tool replies remain paired with their original calls across model
+  changes. This does not guarantee compatibility with every incomplete history
+  or provider-specific signature.
 
 ## Development
 
 ```bash
-npm run check    # syntax check every module
-npm run verify   # offline checks, no network
-npm run smoke    # live: credentials -> project -> models -> stream
-npm run sweep    # live: re-verify the model catalog
+npm run check          # syntax checks
+npm run verify         # offline host-contract checks
+npm test               # regression suite
+npm run smoke          # LIVE account/project/model/stream operations
+npm run sweep          # LIVE backend model checks
 ```
 
-`npm run verify` imports `lib/index.js`, which depends on packages the DSH host
-provides (`@deepseek-ai/dsh-llm`, `dsh-timeout`, `schemastery`). Those only
-resolve inside an installed application, so run these scripts where the plugin is
-actually installed:
+Host-contract checks need the peer dependencies provided by an installed DSH.
+For account-independent testing, use synthetic installation resources, isolated
+credential storage and stubbed network operations. Do not run live scripts or
+use the real status endpoint when a task requires no account reads or writes.
 
-```bash
-cd <profile>/node_modules/agy-next && npm run verify
-```
+## Limitations
 
-Run from a bare source checkout they exit with code 2 and explain this rather
-than dumping a module-resolution stack. `NODE_PATH` does not help — the ESM
-resolver ignores it.
-
-## Scope and limitations
-
-- The scopes this provider requests (`aicode`, `cloud-platform`, `cclog`,
-  `experimentsandconfigs`) are Google's internal Cloud Code Assist scopes. Using
-  them against a personal OAuth client is not an arrangement Google documents or
-  endorses; it works today and may stop working at any time.
-- **A self-made OAuth client is rejected for these scopes.** Walking the setup
-  flow end to end on 2026-10-20 produced `Error 400: invalid_scope` with
-  "Some requested scopes cannot be shown" for
-  `https://www.googleapis.com/auth/aicode`. `aicode`, `cclog` and
-  `experimentsandconfigs` are private to Google's own clients and cannot be
-  granted to a client a user creates in the console. The three public scopes
-  (`cloud-platform`, `userinfo.email`, `userinfo.profile`) are not enough for the
-  `cloudcode-pa` endpoints.
-- **Official Client Solution (Fast Track):** To resolve this limitation and provide
-  truthful live quota tracking and seamless token refresh, `agy-next` provides the
-  built-in Google Official Antigravity Client option (`npm run login -- --official` or
-  Option 1 during interactive login). This uses the standard client credentials embedded
-  in Google's Antigravity desktop client, unlocking full private scopes and multi-account
-  quota pooling without any manual Google Cloud Console configuration.
-- This is an unofficial, community project. It is not affiliated with, endorsed
-  by, or supported by Google or DeepSeek.
-- Endpoint selection prioritises Google's official Antigravity daily host
-  (`https://daily-cloudcode-pa.googleapis.com`) to align quota numbers with the
-  IDE and ensure reliable throughput, falling back to standard production and
-  sandbox hosts when unavailable.
-- **Argon weekly quota:** requests use the official App subclient User-Agent
-  (`antigravity/hub/2.25.0 (...)`). Without `hub/`, Google may return a legacy
-  model/quota cohort that omits Argon even for an eligible account. Every account
-  is queried directly using its own OAuth token; the Antigravity App does not
-  need to be running. The settings page shows Argon as a separate weekly-only
-  column when Google returns `gemini-argon-wtu-weekly`. A missing bucket is
-  unknown/unreported, not zero usage, full quota, or proof of ineligibility.
-  Run `node bin/test-quota-direct.mjs` for the offline request regression check.
+This integration relies on local AGY resource formats and Google's services;
+updates can break parsing, consent, refresh or backend access. Requested scopes
+include `aicode`, `cclog` and `experimentsandconfigs`, which are not publicly
+documented for third-party clients. A successful local test is not evidence of
+Google authorization, official third-party support or general compatibility.
+Review applicable service terms and
+[Google's OAuth policies](https://developers.google.com/identity/protocols/oauth2/policies)
+before use or distribution. No public-release approval or verification is claimed.
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
 
-This plugin was written from scratch, but its protocol knowledge came from
-reverse-engineering an existing MIT-licensed DSH Antigravity provider. That debt
-is acknowledged here deliberately.
+Written from scratch, with protocol knowledge informed by an existing
+MIT-licensed DSH Antigravity provider.

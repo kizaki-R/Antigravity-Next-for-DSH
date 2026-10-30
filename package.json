@@ -1,7 +1,7 @@
 {
   "name": "agy-next",
-  "version": "0.3.2",
-  "description": "From-scratch Antigravity / Cloud Code Assist provider for DeepSeek Harness — bring your own OAuth client",
+  "version": "0.4.1",
+  "description": "Antigravity provider for DeepSeek Harness — requires the official locally installed Antigravity app",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -9,6 +9,7 @@
     "./client": "./lib/ui.js",
     "./config": "./lib/config.js",
     "./client-config": "./lib/client-config.js",
+    "./credential": "./lib/credential.js",
     "./i18n": "./lib/i18n.js",
     "./setup-guide": "./lib/setup-guide.js",
     "./locale/*.json": "./locale/*.json",
@@ -29,11 +30,18 @@
     "agy-next-login": "bin/login.mjs"
   },
   "scripts": {
-    "check": "node --check lib/index.js && node --check lib/ui.js && node --check lib/config.js && node --check lib/client.js && node --check lib/client-config.js && node --check lib/status.js && node --check lib/web-api.js && node --check lib/i18n.js && node --check lib/setup-guide.js && node --check lib/setup-state.js && node --check lib/setup-probe.js && node --check lib/constants.js && node --check lib/convert.js && node --check lib/oauth.js && node --check lib/store.js && node --check lib/stream.js && node --check bin/login.mjs && node --check bin/smoke.mjs",
+    "check": "node --check lib/index.js && node --check lib/ui.js && node --check lib/config.js && node --check lib/client.js && node --check lib/client-config.js && node --check lib/credential.js && node --check lib/status.js && node --check lib/web-api.js && node --check lib/i18n.js && node --check lib/setup-guide.js && node --check lib/setup-state.js && node --check lib/setup-probe.js && node --check lib/constants.js && node --check lib/convert.js && node --check lib/oauth.js && node --check lib/store.js && node --check lib/stream.js && node --check lib/model-visibility.js && node --check lib/model-family.js && node --check lib/dynamic-models.js && node --check lib/account-plan.js && node --check lib/installed-agy.js && node --check bin/test-account-plan.mjs && node --check bin/test-model-availability.mjs && node --check bin/test-regressions.mjs && node --check bin/test-installed-agy.mjs && node --check bin/login.mjs && node --check bin/smoke.mjs && node --check bin/test-argon-routing.mjs && node --check bin/test-tool-history.mjs && node --check bin/test-dynamic-models.mjs",
     "verify": "node bin/check-offline.mjs",
+    "test": "node bin/test-installed-agy.mjs && node bin/test-regressions.mjs && node bin/test-tool-history.mjs && node bin/test-dynamic-models.mjs && node bin/test-quota-direct.mjs && node bin/test-account-plan.mjs",
+    "test:peers": "node --loader file:///C:/Users/<username>/Documents/deepseek%20harness/<workspace>/_agy-check/peer-resolve-hook.mjs bin/test-regressions.mjs",
     "smoke": "node bin/smoke.mjs",
     "tools": "node bin/test-tools.mjs",
     "routing": "node bin/verify-routing.mjs",
+    "test:argon": "node bin/test-argon-routing.mjs",
+    "test:history": "node bin/test-tool-history.mjs",
+    "test:dynamic": "node bin/test-dynamic-models.mjs",
+    "test:plan": "node bin/test-account-plan.mjs",
+    "test:regressions": "node bin/test-regressions.mjs",
     "sweep": "node bin/sweep-models.mjs",
     "login": "node bin/login.mjs"
   },
@@ -57,15 +65,17 @@
       "dsh": ">=0.1.5-rc.1 <0.3.0",
       "dshReleases": {
         "0.1.5-rc.1": "compatible",
-        "0.2.0-rc.2": "compatible"
+        "0.2.0-rc.2": "compatible",
+        "0.2.1-rc.2": "compatible",
+        "0.2.1-rc.3": "compatible"
       }
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-home-paths": ">=0.1.5-rc.1 <0.3.0",
-    "@deepseek-ai/dsh-host-webserver": ">=0.1.5-rc.1 <0.3.0",
-    "@deepseek-ai/dsh-llm": ">=0.1.5-rc.1 <0.3.0",
-    "@deepseek-ai/dsh-timeout": ">=0.1.5-rc.1 <0.3.0",
+    "@deepseek-ai/dsh-home-paths": "0.1.5-rc.1 || ^0.2.0-rc.1 || ^0.2.1-rc.1",
+    "@deepseek-ai/dsh-host-webserver": "0.1.5-rc.1 || ^0.2.0-rc.1 || ^0.2.1-rc.1",
+    "@deepseek-ai/dsh-llm": "0.1.5-rc.1 || ^0.2.0-rc.1 || ^0.2.1-rc.1",
+    "@deepseek-ai/dsh-timeout": "0.1.5-rc.1 || ^0.2.0-rc.1 || ^0.2.1-rc.1",
     "@deepseek-ai/schemastery": ">=3.18.0"
   },
   "keywords": [

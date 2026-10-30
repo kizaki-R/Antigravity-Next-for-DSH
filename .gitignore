@@ -14,7 +14,15 @@ agy-next-oauth.json
 agy-next-oauth-client.json
 antigravity-oauth*.json
 credentials*.json
+*credential*.json
+*oauth*.json
+*token*.json
 *.token
+*.pem
+*.key
+*.p12
+*.pfx
+.npmrc
 .env
 .env.*
 

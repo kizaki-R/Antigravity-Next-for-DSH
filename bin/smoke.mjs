@@ -8,8 +8,7 @@
 
 import { CredentialStore, needsRefresh } from "../lib/store.js";
 import { refreshAccessToken } from "../lib/oauth.js";
-import { clientId, clientSecret } from "../lib/constants.js";
-import { clientFilePath, readClientFile } from "../lib/client-config.js";
+import { resolveOAuthClient } from "../lib/status.js";
 import {
   antigravityHeaders,
   fetchAvailableModels,
@@ -28,6 +27,7 @@ const fail = (m) => {
 };
 
 async function main() {
+  const client = await resolveOAuthClient();
   const store = new CredentialStore();
 
   log(`credential file: ${await store.path()}`);
@@ -58,10 +58,7 @@ async function main() {
     log("access token expired; refreshing...");
     if (!credential.refresh) return fail("no refresh token available");
     try {
-      const fileClient = await readClientFile(await clientFilePath());
-      const tokens = await refreshAccessToken(credential.refresh, {
-        client: { clientId: clientId("", fileClient), clientSecret: clientSecret("", fileClient) },
-      });
+      const tokens = await refreshAccessToken(credential.refresh, { client });
       credential = {
         ...credential,
         access: tokens.access_token,

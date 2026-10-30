@@ -13,10 +13,10 @@ const {
   name: pluginName,
   runtimeModelFor,
   fallbackRuntimeModel,
+  thinkingConfig,
 } = await loadPlugin();
-import { MODELS, GONE_RUNTIME_MODELS, ROUTING, PROVIDER } from "../lib/constants.js";
+import { MODELS, GONE_RUNTIME_MODELS, ROUTING, RUNTIME_MAX_TOKENS, PROVIDER } from "../lib/constants.js";
 import { convertMessages, buildRequestBody } from "../lib/convert.js";
-import { CredentialStore } from "../lib/store.js";
 
 let failures = 0;
 const check = (label, condition, detail = "") => {
@@ -34,7 +34,8 @@ check("named export name = 'agy-next'", pluginName === "agy-next", String(plugin
 check("named export Config is a schemastery schema", typeof Config === "function" && "~standard" in Config);
 check("AntigravityAdapter is a class", typeof AntigravityAdapter === "function");
 
-const store = new CredentialStore();
+// Keep this catalog-only test isolated from a user's real saved visibility list.
+const store = { readBook: async () => ({ visibleModels: null }) };
 const adapter = new AntigravityAdapter(store);
 
 console.log("\n=== host contract ===");
@@ -45,6 +46,7 @@ check("providerInfo name non-empty", typeof info.name === "string" && info.name.
 const models = await adapter.listModels(PROVIDER);
 check("listModels returns array", Array.isArray(models));
 check("listModels count matches catalog", models.length === MODELS.length, `${models.length} vs ${MODELS.length}`);
+check("Argon is shown in the provider model list", models.some((model) => model.id === "gemini-4-argon"));
 const badModalities = models.filter(
   (m) => !Array.isArray(m.inputModalities) || !m.inputModalities.includes("text"),
 );
@@ -103,6 +105,21 @@ for (const model of MODELS) {
   }
 }
 check("every declared effort has a routing entry", uncoveredEfforts.length === 0, uncoveredEfforts.join(", "));
+
+const argon = MODELS.find((model) => model.id === "gemini-4-argon");
+check("Gemini 4 Argon is in the model catalog", Boolean(argon), MODELS.map((m) => m.id).join(", "));
+check("Argon advertises selectable low/medium/high efforts", JSON.stringify(argon?.efforts) === JSON.stringify(["low", "medium", "high"]), JSON.stringify(argon?.efforts));
+check("Argon effort routes to official runtime ids",
+  ROUTING["gemini-4-argon"]?.low === "gemini-4-argon-low" &&
+  ROUTING["gemini-4-argon"]?.medium === "gemini-4-argon-medium" &&
+  ROUTING["gemini-4-argon"]?.high === "gemini-4-argon-high");
+check("Argon default is medium", runtimeModelFor("gemini-4-argon", "medium") === "gemini-4-argon-medium");
+check("Argon variants cap output at advertised 65,536 tokens",
+  ["low", "medium", "high"].every((effort) => RUNTIME_MAX_TOKENS[`gemini-4-argon-${effort}`] === 65536));
+check("Argon runtime id supplies effort without generic thinking budget",
+  thinkingConfig("gemini-4-argon", "gemini-4-argon-medium", "medium", 4096) === undefined);
+check("explicit Argon thinking-off disables thoughts",
+  thinkingConfig("gemini-4-argon", "gemini-4-argon-low", "off", 4096)?.includeThoughts === false);
 
 console.log("\n=== message conversion ===");
 const contents = convertMessages(
