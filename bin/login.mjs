@@ -36,7 +36,7 @@ async function main() {
   }
   if (args.has("--logout")) {
     await store.delete();
-    log("Removed the plugin's stored credentials; official app data is unchanged.");
+    log("Signed out; plugin credentials are cleared. The legacy plugin's file is left untouched.");
     return 0;
   }
   const client = await resolveOAuthClient();

@@ -223,6 +223,15 @@ try {
       ] },
     ]) });
     await rejects(() => discoverInstalledAgy(crossed.options), 'AMBIGUOUS_CLIENT');
+    // Edge case: consumer client ID present but missing paired secret fails closed with AMBIGUOUS_CLIENT
+    const missingSecret = await fixture({ client: false, binary: methods([
+      { name: businessName, nameOff: 0, loads: [
+        { at: 40, value: consumerId, target: 4640 },
+        { at: 168, value: businessId, target: 4800 }, { at: 232, value: businessSecret, target: 4880 },
+      ] },
+      { name: hostName, nameOff: 140, loads: [{ at: 40, value: id, target: 5120 }, { at: 104, value: secret, target: 5220 }] },
+    ]) });
+    await rejects(() => discoverInstalledAgy(missingSecret.options), 'AMBIGUOUS_CLIENT');
   });
   await test('native ambiguity, bounds, missing method and malformed PE', async () => {
     for (const [binary, code] of [[native({ ambiguous: true }), 'AMBIGUOUS_CLIENT'], [native({ badPointer: true }), 'UNSUPPORTED_NATIVE'],

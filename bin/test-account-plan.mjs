@@ -242,7 +242,17 @@ try {
 // Opt-in integration check: refreshes one already-authorized account in memory,
 // never writes tokens, and prints only safe tier fields. Run manually with
 // AGY_PLAN_LIVE_PROBE=1; do not make this part of the offline default suite.
+//
+// The default `npm test` lane is strictly offline. Someone who exports the
+// live-probe flag while a CI or release script runs that lane must get a loud
+// refusal — not a silent touch of a real account.
+if (process.env.AGY_PLAN_LIVE_PROBE === '1' && process.env.npm_lifecycle_event === 'test') {
+  console.error('AGY_PLAN_LIVE_PROBE=1 must not run inside the default `npm test` lane (offline only).');
+  console.error('To probe deliberately and in isolation, run `node bin/test-account-plan.mjs` directly.');
+  process.exit(2);
+}
 if (process.env.AGY_PLAN_LIVE_PROBE === '1') {
+  console.warn('WARNING: live probe against a real account; reads only, no tokens written.');
   const { CredentialStore } = await import('../lib/store.js');
   const { refreshAccessToken } = await import('../lib/oauth.js');
   const { readAccountPlan } = await import('../lib/account-plan.js');

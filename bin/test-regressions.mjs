@@ -18,6 +18,10 @@ import { MODELS, ROUTING, clientConfigured, clientId, clientSecret } from "../li
 import { clearAllExhaustion, isFamilyExhausted, markFamilyExhausted, quotaFamilyAtThreshold, recoverExhaustedFamilies } from "../lib/model-family.js";
 
 const results = [];
+// AGY_TESTS_STRICT=1 (set by bin/test-peers.mjs for the peers lane) turns a
+// peer-missed skip into an explicit failure: a release run must not quietly
+// count "cannot find package" as a green test.
+const strict = process.env.AGY_TESTS_STRICT === "1";
 async function test(name, fn) {
   try {
     await fn();
@@ -482,4 +486,8 @@ for (const result of results) {
   else console.log(`${result.ok ? "PASS" : "FAIL"}  ${result.name}${result.ok ? "" : ` — ${result.message}`}`);
 }
 console.log(`\n${failed.length === 0 ? "ALL REGRESSIONS PASSED" : `${failed.length} REGRESSION(S) FAILED`}${skipped.length ? ` (${skipped.length} skipped)` : ""}`);
+if (strict && skipped.length) {
+  console.log(`STRICT MODE: ${skipped.length} skipped test(s) count as failures — run with AGY_PEER_ROOT pointing at the DSH peer packages.`);
+  process.exit(1);
+}
 process.exit(failed.length === 0 ? 0 : 1);
