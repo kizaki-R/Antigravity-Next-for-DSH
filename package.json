@@ -24,6 +24,8 @@
     "screenshots.json",
     "cordis.patch.yml",
     "README.md",
+    "README.zh-TW.md",
+    "README.zh-CN.md",
     "CHANGELOG.md",
     "SETUP.md",
     "LICENSE",
