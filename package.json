@@ -20,6 +20,8 @@
     "lib",
     "bin",
     "locale",
+    "assets",
+    "screenshots.json",
     "cordis.patch.yml",
     "README.md",
     "CHANGELOG.md",
@@ -89,5 +91,15 @@
     "llm",
     "provider"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kizaki-R/Antigravity-Next-for-DSH.git",
+    "directory": "agy-next"
+  },
+  "homepage": "https://github.com/kizaki-R/Antigravity-Next-for-DSH#readme",
+  "bugs": {
+    "url": "https://github.com/kizaki-R/Antigravity-Next-for-DSH/issues"
+  },
+  "author": "Kizaki (https://github.com/kizaki-R)",
   "license": "MIT"
 }
