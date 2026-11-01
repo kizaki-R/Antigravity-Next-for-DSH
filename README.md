@@ -19,70 +19,68 @@ An unofficial model provider plugin for [DeepSeek Harness](https://deepseek.com/
 
 ## Highlights
 
-- **Zero Cloud Console Setup:** Automatically resolves OAuth client pairs from your local official Antigravity installation. No need to create a project or credentials in Google Cloud Console.
-- **Multi-Account Pooling:** Add multiple Google accounts. Set quota safety thresholds and automatically failover to standby accounts when quotas expire.
-- **Visual Quota Dashboard:** Live visual telemetry for Gemini, Claude, and Gemini 4 Argon weekly/5-hour quota buckets in the Settings panel.
-- **Thinking Level Control:** Native mapping for reasoning efforts (Low, Medium, High) across Gemini 4 Argon, Gemini 3.8 Flash, and Claude models.
-- **Private & Local:** Client discovery is read-only. Tokens remain strictly inside your local `<DSH_HOME>/storages/agy-next-oauth.json`.
+- **Zero Cloud Console Setup:** Resolves OAuth client pairs directly from your local Antigravity installation. No need to create a project or credentials in Google Cloud Console.
+- **Multi-Account Pooling:** Add multiple Google accounts with quota thresholds. When one account runs out, the plugin automatically switches to a standby account.
+- **Quota Telemetry:** Live quota progress bars for Gemini, Claude, and Gemini 4 Argon (5-hour and weekly windows) directly in the Settings panel.
+- **Reasoning Effort Control:** Direct mapping for reasoning efforts (Low, Medium, High) across Gemini 4 Argon, Gemini 3.8 Flash, and Claude models.
+- **Local Credential Storage:** Discovery is read-only. Tokens stay in `<DSH_HOME>/storages/agy-next-oauth.json` and are never uploaded.
 
 ---
 
 ## Requirements
 
 1. **DeepSeek Harness:** `>=0.1.5-rc.1 <0.3.0` running on Node `>=20`.
-2. **Official Antigravity App:** Installed locally on Windows or macOS (Linux support in progress). Download from [official portal](https://antigravity.google/product/antigravity-2). *The app does not need to be running.*
+2. **Official Antigravity App:** Installed locally on Windows or macOS (Linux support in progress). Download from the [official portal](https://antigravity.google/product/antigravity-2). *The application does not need to be running.*
 3. **Google Account:** With browser consent capability and access to Gemini / Cloud Code Assist models.
 
 ---
 
 ## Installation
 
-### Method 1: In DSH Web or Desktop (Recommended)
+### Method 1: DSH UI (Recommended)
 
 1. Open **Plugins → + Add plugin** in the DSH sidebar.
-2. Enter the repository URL into the input field:
+2. Enter the repository URL:
    ```text
    https://github.com/kizaki-R/Antigravity-Next-for-DSH
    ```
    *(Or enter `agy-next` once published to npm).*
-3. Select **Install**. DSH will automatically mount the plugin and register the settings interface.
-4. Restart DSH.
+3. Select **Install**, then restart DSH.
 
-### Method 2: Local CLI / Developer Link
+### Method 2: Local Developer Link (CLI)
 
-If developing from a local checkout:
+For local development:
 
 ```bash
-# Register the local link in your DSH profile
 dsh plugin --profile <profile> add link:/absolute/path/to/agy-next
 ```
 
-Ensure `agy-next` is included in your profile's `dsh.profile.bundles`, then restart DSH.
+Make sure `agy-next` is in your profile's `dsh.profile.bundles`, then restart DSH.
 
 ---
 
 ## Getting Started
 
-### 1. Verification & Login
+### 1. Account Setup
 
-Open **Settings → AGY-Next** in DSH:
+In DSH, open **Settings → AGY-Next**:
 
-1. **Installation Status:** Verify that DSH detects your local Antigravity installation path.
-2. **Sign In:** Click **Sign in / Add account**. A browser window will open for standard Google OAuth consent.
-3. Once authenticated, your account appears in the Account Pool with real-time quota indicators.
+1. **Check Status:** Confirm DSH detects the local Antigravity installation path.
+2. **Add Account:** Click **Sign in / Add account**. A browser window opens for standard Google OAuth consent.
+3. Once authenticated, the account appears in the Account Pool with real-time quota bars.
 
-*Headless / CLI alternative:*
+*CLI commands:*
 
 ```bash
-npm run login           # Add / sign in account
-npm run login -- --status  # Check active status & quota
+npm run login              # Sign in account
+npm run login -- --status  # Check active account & quota
 npm run login -- --force   # Force re-authentication
 npm run login -- --logout  # Clear stored credentials
 ```
 
 ### 2. Custom Installation Path
 
-If your Antigravity application is installed in a non-standard directory, specify it before launching DSH:
+If Antigravity is installed in a non-standard location, set the environment variable before starting DSH:
 
 ```powershell
 # PowerShell
@@ -93,16 +91,16 @@ $env:AGY_NEXT_INSTALL_PATH = 'C:\Custom\Path\To\Antigravity'
 
 ## Configuration
 
-Add or edit the plugin section in your profile's `cordis.yml` if custom parameters are needed:
+Custom parameters can be set in your profile's `cordis.yml`:
 
 ```yaml
 - id: agy-next
   name: agy-next
   config:
     credentialPath: ""               # Default: <DSH_HOME>/storages/agy-next-oauth.json
-    streamIdleTimeoutMs: 300000      # 5 minutes idle stream protection
-    discoveryTimeoutMs: 8000         # Local binary client detection timeout
-    projectCacheTtlMs: 1800000       # Project metadata cache TTL (30 mins)
+    streamIdleTimeoutMs: 300000      # Idle stream protection timeout (ms, default 5 mins)
+    discoveryTimeoutMs: 8000         # Local client discovery timeout (ms)
+    projectCacheTtlMs: 1800000       # Project metadata cache TTL (ms, 30 mins)
     runtimeModel: ""                 # Optional: pin a specific upstream model id
 ```
 
@@ -119,17 +117,17 @@ Add or edit the plugin section in your profile's `cordis.yml` if custom paramete
 
 ---
 
-## Development & Test Suite
+## Development
 
-Run strict offline tests inside `agy-next/`:
+Run offline tests inside `agy-next/`:
 
 ```bash
-npm run check        # Syntax checks across all 40 source modules
+npm run check        # Syntax validation across all 40 modules
 npm test             # Offline regression suite (21 fixture tests)
-npm run test:peers   # Strict host peer contract test (0 skips tolerated)
+npm run test:peers   # Strict host peer contract test (requires AGY_PEER_ROOT)
 ```
 
-For peer contract testing, export the DSH runtime dependencies:
+To run peer contract tests, export the DSH runtime dependency path:
 
 ```powershell
 $env:AGY_PEER_ROOT = 'C:\path\to\dsh\node_modules'
@@ -138,11 +136,11 @@ npm run test:peers
 
 ---
 
-## Security & Storage Architecture
+## Security
 
-- **No Secret Hardcoding:** This repository contains no bundled Google OAuth Client IDs or Client Secrets. Everything is resolved dynamically at runtime from local binary resources.
-- **Isolated Storage:** Credentials are saved to `agy-next-oauth.json` under your DSH home directory. The official Antigravity app's internal database is never modified or read.
-- **Tombstone Lifecycle:** Logging out completely writes an empty book with a `loggedOut: true` tombstone to prevent phantom auto-imports from legacy configs.
+- **No Hardcoded Secrets:** The repository contains no Google Client IDs or Client Secrets. Values are resolved dynamically at runtime from local application resources.
+- **Storage Isolation:** Credentials are saved to `agy-next-oauth.json` under the DSH home directory. The official Antigravity app database is never read or modified.
+- **Tombstone Cleanup:** Signing out writes an empty book with `loggedOut: true` to prevent automatic re-import from legacy configurations.
 
 ---
 

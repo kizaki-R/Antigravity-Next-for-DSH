@@ -17,13 +17,13 @@
 
 ---
 
-## 核心特性
+## 功能特性
 
-- **零云端配置：** 自动从本机已安装的官方 Antigravity 桌面应用中解析 OAuth 客户端凭据，无需在 Google Cloud Console 手动创建项目或金钥。
-- **多账号轮换池：** 支持登录多个 Google 账号，配置额度安全阈值，在当前账号额度耗尽时自动无缝故障转移至备用账号。
-- **可视化额度仪表盘：** 设置页面实时展示 Gemini、Claude 及 Gemini 4 Argon 每周/5小时配额监控条。
-- **思考强度控制：** 原生支持推理思考强度调节（Low / Medium / High，涵盖 Gemini 4 Argon、Gemini 3.8 Flash 与 Claude 系列）。
-- **隐私与本地优先：** 客户端解析全程只读。Token 仅保存在本地 `<DSH_HOME>/storages/agy-next-oauth.json`，绝不上传私钥或账号数据。
+- **免手动配置 GCP**：直接从本机安装的官方 Antigravity 解析 OAuth client，无需在 Google Cloud Console 创建项目或密钥。
+- **多账号轮换池**：可添加多个 Google 账号并配置安全阈值；当前账号额度耗尽时，自动切换至备用账号继续对话。
+- **实时额度监控面板**：设置页展示 Gemini、Claude 与 Gemini 4 Argon 的每周及 5 小时额度条与重置倒计时。
+- **思考强度档位调节**：支持推理思考强度调节（Low、Medium、High，适用于 Gemini 4 Argon、Gemini 3.8 Flash 与 Claude 系列）。
+- **本地安全存储**：客户端探索仅读取文件，不启动官方应用。Token 仅保存在本地 `<DSH_HOME>/storages/agy-next-oauth.json`，不上载私钥。
 
 ---
 
@@ -37,20 +37,19 @@
 
 ## 安装说明
 
-### 方式一：通过 DSH 桌面端或 Web 界面安装（推荐）
+### 方式一：DSH 界面安装（推荐）
 
-1. 在 DSH 侧边栏打开 **“插件” → “+ 添加插件”**。
-2. 在输入框中输入 GitHub 仓库地址：
+1. 打开 DSH 侧边栏的 **“插件” → “+ 添加插件”**。
+2. 在输入框输入 GitHub 仓库地址：
    ```text
    https://github.com/kizaki-R/Antigravity-Next-for-DSH
    ```
    *（npm 发布后，亦可直接输入包名 `agy-next`）。*
-3. 点击 **“安装”**，DSH 将自动挂载插件并注册设置界面。
-4. 重启 DSH。
+3. 点击 **“安装”**，完成后重启 DSH。
 
-### 方式二：本地开发模式（CLI / Developer Link）
+### 方式二：本地开发模式（CLI / Link）
 
-本地开发时添加链接至配置：
+从本地源码调试：
 
 ```bash
 # 在 DSH profile 中注册本地链接
@@ -63,26 +62,26 @@ dsh plugin --profile <profile> add link:/absolute/path/to/agy-next
 
 ## 快速使用
 
-### 1. 验证与登录
+### 1. 登录账号
 
 在 DSH 中进入 **“设置” → “AGY-Next”**：
 
-1. **安装状态：** 确认插件成功检测到本地 Antigravity 的安装路径。
-2. **账号登录：** 点击 **“登录 / 添加账号”**，系统将调用浏览器打开 Google 官方授权页。
-3. 授权成功后，账号将添加至账号池，并实时展示各模型配额状态。
+1. **检查状态**：确认页面识别到本地 Antigravity 安装路径。
+2. **添加账号**：点击 **“登录 / 添加账号”**，系统将调用浏览器打开 Google 官方授权页。
+3. 授权成功后账号即进入账号池，并实时展示各模型额度。
 
-*CLI 命令行备用命令：*
+*CLI 备用命令：*
 
 ```bash
-npm run login           # 登录或添加账号
-npm run login -- --status  # 查看当前活动账号状态与额度
+npm run login              # 登录新账号
+npm run login -- --status  # 查看当前活动账号与额度
 npm run login -- --force   # 强制重新认证
-npm run login -- --logout  # 清除已保存的凭据
+npm run login -- --logout  # 清除已保存凭据
 ```
 
 ### 2. 自定义安装路径
 
-若 Antigravity 安装在非标准目录，可在启动 DSH 前配置环境变量：
+若 Antigravity 安装在非标准目录，在启动 DSH 前配置环境变量即可：
 
 ```powershell
 # PowerShell
@@ -138,11 +137,11 @@ npm run test:peers
 
 ---
 
-## 安全与架构机制
+## 安全机制
 
-- **零密钥内嵌：** 源码完全不包含任何硬编码的 Google Client ID 或 Secret，全部运行时由本地应用解析。
-- **存储隔离：** 凭据统一存储在 DSH 专属的 `agy-next-oauth.json` 中，绝不触碰官方应用的本地数据库。
-- **墓碑机制（Tombstone）：** 登出时写入标有 `loggedOut: true` 的空文件，彻底杜绝历史配置残留导致的幽灵账号自动复活问题。
+- **不内置密钥**：代码库不包含任何 Google Client ID 或 Client Secret，全部由本地应用资源动态解析。
+- **存储隔离**：凭据保存在 DSH 专属的 `agy-next-oauth.json` 中，不读取或修改官方应用的本地数据库。
+- **墓碑机制（Tombstone）**：登出所有账号时写入标有 `loggedOut: true` 的空文件，彻底杜绝历史配置自动复活旧账号。
 
 ---
 
