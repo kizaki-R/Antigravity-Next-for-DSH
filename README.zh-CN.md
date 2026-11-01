@@ -21,8 +21,8 @@
 
 - **零云端配置：** 自动从本机已安装的官方 Antigravity 桌面应用中解析 OAuth 客户端凭据，无需在 Google Cloud Console 手动创建项目或金钥。
 - **多账号轮换池：** 支持登录多个 Google 账号，配置额度安全阈值，在当前账号额度耗尽时自动无缝故障转移至备用账号。
-- **可视化额度仪表盘：** 设置页面实时展示 Gemini、Claude 3p 及 Gemini 4 Argon 每周/5小时配额监控条。
-- **思考强度控制：** 原生支持 Gemini 4 Argon 推理思考强度调节（Low / Medium / High）。
+- **可视化额度仪表盘：** 设置页面实时展示 Gemini、Claude 及 Gemini 4 Argon 每周/5小时配额监控条。
+- **思考强度控制：** 原生支持推理思考强度调节（Low / Medium / High，涵盖 Gemini 4 Argon、Gemini 3.8 Flash 与 Claude 系列）。
 - **隐私与本地优先：** 客户端解析全程只读。Token 仅保存在本地 `<DSH_HOME>/storages/agy-next-oauth.json`，绝不上传私钥或账号数据。
 
 ---
@@ -30,7 +30,7 @@
 ## 环境要求
 
 1. **DeepSeek Harness：** 版本 `>=0.1.5-rc.1 <0.3.0`，Node.js 运行时 `>=20`。
-2. **官方 Antigravity 桌面端：** 安装于本机 Windows 系统（macOS / Linux 适配进行中）。请从[官方渠道](https://antigravity.google/product/antigravity-2)下载。*运行时无需保持该应用程序处于开启状态。*
+2. **官方 Antigravity 桌面端：** 安装于本机 Windows 或 macOS 系统（Linux 适配进行中）。请从[官方渠道](https://antigravity.google/product/antigravity-2)下载。*运行时无需保持该应用程序处于开启状态。*
 3. **Google 账号：** 支持浏览器 OAuth 授权且具备访问 Gemini / Cloud Code Assist 服务的权限。
 
 ---
@@ -124,7 +124,7 @@ $env:AGY_NEXT_INSTALL_PATH = 'C:\Custom\Path\To\Antigravity'
 在 `agy-next/` 目录下运行完整离线测试集：
 
 ```bash
-npm run check        # 检查全量 39 个源码模块的语法
+npm run check        # 检查全量 40 个源码模块的语法
 npm test             # 离线回归测试集（21 个用例）
 npm run test:peers   # 严格主控 peers 契约测试（不允许跳过）
 ```

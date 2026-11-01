@@ -21,8 +21,8 @@ An unofficial model provider plugin for [DeepSeek Harness](https://deepseek.com/
 
 - **Zero Cloud Console Setup:** Automatically resolves OAuth client pairs from your local official Antigravity installation. No need to create a project or credentials in Google Cloud Console.
 - **Multi-Account Pooling:** Add multiple Google accounts. Set quota safety thresholds and automatically failover to standby accounts when quotas expire.
-- **Visual Quota Dashboard:** Live visual telemetry for Gemini, Claude 3p, and Gemini 4 Argon weekly/5-hour quota buckets in the Settings panel.
-- **Thinking Level Control:** Native mapping for Gemini 4 Argon reasoning efforts (Low, Medium, High).
+- **Visual Quota Dashboard:** Live visual telemetry for Gemini, Claude, and Gemini 4 Argon weekly/5-hour quota buckets in the Settings panel.
+- **Thinking Level Control:** Native mapping for reasoning efforts (Low, Medium, High) across Gemini 4 Argon, Gemini 3.8 Flash, and Claude models.
 - **Private & Local:** Client discovery is read-only. Tokens remain strictly inside your local `<DSH_HOME>/storages/agy-next-oauth.json`.
 
 ---
@@ -30,7 +30,7 @@ An unofficial model provider plugin for [DeepSeek Harness](https://deepseek.com/
 ## Requirements
 
 1. **DeepSeek Harness:** `>=0.1.5-rc.1 <0.3.0` running on Node `>=20`.
-2. **Official Antigravity App:** Installed locally on Windows (macOS/Linux detection in progress). Download from [official portal](https://antigravity.google/product/antigravity-2). *The app does not need to be running.*
+2. **Official Antigravity App:** Installed locally on Windows or macOS (Linux support in progress). Download from [official portal](https://antigravity.google/product/antigravity-2). *The app does not need to be running.*
 3. **Google Account:** With browser consent capability and access to Gemini / Cloud Code Assist models.
 
 ---
@@ -124,7 +124,7 @@ Add or edit the plugin section in your profile's `cordis.yml` if custom paramete
 Run strict offline tests inside `agy-next/`:
 
 ```bash
-npm run check        # Syntax checks across all 39 source modules
+npm run check        # Syntax checks across all 40 source modules
 npm test             # Offline regression suite (21 fixture tests)
 npm run test:peers   # Strict host peer contract test (0 skips tolerated)
 ```

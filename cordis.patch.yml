@@ -10,9 +10,8 @@
 # and the plugin never loads.
 #
 # The host half is the model provider: `apply()` calls
-# `ctx.llm.registerAdapter([PROVIDER], adapter)`. There is no browser half, so
-# no `dsh.client` block is declared — the model picker reads the provider list
-# from the host's llm service.
+# `ctx.llm.registerAdapter([PROVIDER], adapter)`. The browser settings UI
+# is declared in package.json under `dsh.client`.
 - insert:
     - id: agy-next
       name: agy-next
