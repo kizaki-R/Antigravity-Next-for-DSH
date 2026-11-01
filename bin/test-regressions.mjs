@@ -18,6 +18,22 @@ import { MODELS, ROUTING, clientConfigured, clientId, clientSecret } from "../li
 import { clearAllExhaustion, isFamilyExhausted, markFamilyExhausted, quotaFamilyAtThreshold, recoverExhaustedFamilies } from "../lib/model-family.js";
 
 const results = [];
+
+/**
+ * Canonicalise the temp root before comparing it with a realpath'd directory.
+ * macOS resolves /var through /private/var, so tmpdir() and realpath(root)
+ * spell the same directory differently and a bare startsWith check fails.
+ */
+async function tempRootPrefix(name) {
+  let base;
+  try {
+    base = await realpath(tmpdir());
+  } catch {
+    base = tmpdir();
+  }
+  return join(base, name);
+}
+
 // AGY_TESTS_STRICT=1 (set by bin/test-peers.mjs for the peers lane) turns a
 // peer-missed skip into an explicit failure: a release run must not quietly
 // count "cannot find package" as a green test.
@@ -103,7 +119,7 @@ await test("login replaces only the captured account when sign-in completes afte
     assert.equal(book.accounts.find(account => account.email === "a-new@example.invalid").access, "a-new-login");
   } finally {
     const resolved = await realpath(root);
-    assert.ok(resolved.startsWith(join(tmpdir(), "agy-login-target-")));
+    assert.ok(resolved.startsWith(await tempRootPrefix("agy-login-target-")));
     await rm(resolved, { recursive: true, force: true });
   }
 });
@@ -147,7 +163,7 @@ await test("captured credential writes preserve account IDs and never retarget a
   } finally {
     const resolved = await realpath(root);
     assert.equal(resolved, root);
-    assert.ok(resolved.startsWith(join(tmpdir(), "agy-write-target-")));
+    assert.ok(resolved.startsWith(await tempRootPrefix("agy-write-target-")));
     await rm(resolved, { recursive: true, force: true });
   }
 });

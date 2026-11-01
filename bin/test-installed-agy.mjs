@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Entirely synthetic, offline fixtures. Never print actual installed OAuth values.
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, rm, symlink, truncate } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, rm, symlink, truncate, realpath } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -12,6 +12,9 @@ const cleanupFs = process.versions.electron === undefined
   : createRequire(import.meta.url)('original-fs').promises;
 
 const temporary = await mkdtemp(join(tmpdir(), 'agy-installed-test-'));
+// macOS resolves /var through /private/var, so canonicalise the temp root once
+// and compare the canonical directory against a canonicalised prefix.
+const temporaryRoot = await realpath(tmpdir());
 const id = '123456789012-' + 'a'.repeat(32) + '.apps.googleusercontent.com';
 const secret = 'GOCSPX-' + 'b'.repeat(28);
 const pkg = { name: 'antigravity', productName: 'Antigravity', version: '2.25.0',
@@ -264,7 +267,8 @@ try {
   console.log(`Passed ${passed} installed-Antigravity tests (synthetic fixtures only).`);
 } finally {
   // The target is a verified, newly created temp directory, never a user install.
-  assert.ok(temporary.startsWith(join(tmpdir(), 'agy-installed-test-')));
+  // macOS resolves /var through /private/var, so compare canonical to canonical.
+  assert.ok((await realpath(temporary)).startsWith(join(temporaryRoot, 'agy-installed-test-')));
   await cleanupFs.rm(temporary, { recursive: true, force: true });
 }
 

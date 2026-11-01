@@ -234,8 +234,11 @@ try {
   } finally { globalThis.fetch = oldFetchForRace; }
 } finally {
   const resolved = await realpath(raceRoot);
-  assert.equal(resolved, raceRoot);
-  assert.ok(resolved.startsWith(join(tmpdir(), 'agy-status-race-')));
+  // macOS resolves /var through /private/var, so the canonical temp root is the
+  // valid base for both checks; comparing bare tmpdir() would fail there.
+  const tempRoot = await realpath(tmpdir());
+  assert.equal(resolved.startsWith(tempRoot), true);
+  assert.ok(resolved.startsWith(join(tempRoot, 'agy-status-race-')));
   await rm(resolved, { recursive: true, force: true });
 }
 
