@@ -7,7 +7,7 @@
 [![CI](https://github.com/kizaki-R/Antigravity-Next-for-DSH/actions/workflows/ci.yml/badge.svg)](https://github.com/kizaki-R/Antigravity-Next-for-DSH/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](package.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![DeepSeek Harness](https://img.shields.io/badge/DSH-%3E%3D0.1.5--rc.1%20%3C0.3.0-orange.svg)](https://deepseek.com/harness/)
+[![DeepSeek Harness](https://img.shields.io/badge/DSH-0.1.5%20~%200.2.x-orange.svg)](https://deepseek.com/harness/)
 
 [English](README.md) | [繁體中文](README.zh-TW.md) | [简体中文](README.zh-CN.md)
 
@@ -29,7 +29,7 @@
 
 ## 系統需求
 
-1. **DeepSeek Harness**：版本 `>=0.1.5-rc.1 <0.3.0`，Node.js `>=20`。
+1. **DeepSeek Harness**：版本 `0.1.5` ～ `0.2.x`（完整相容至最新 `0.2.1` 系列），Node.js `>=20`。
 2. **官方 Antigravity 桌面程式**：已安裝於 Windows 或 macOS（Linux 支援進行中）。可至[官方網站](https://antigravity.google/product/antigravity-2)下載（*使用外掛時該程式不需保持啟動*）。
 3. **Google 帳號**：可正常完成瀏覽器 OAuth 授權，並擁有 Gemini / Cloud Code Assist 存取權限。
 

@@ -7,7 +7,7 @@
 [![CI](https://github.com/kizaki-R/Antigravity-Next-for-DSH/actions/workflows/ci.yml/badge.svg)](https://github.com/kizaki-R/Antigravity-Next-for-DSH/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](package.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![DeepSeek Harness](https://img.shields.io/badge/DSH-%3E%3D0.1.5--rc.1%20%3C0.3.0-orange.svg)](https://deepseek.com/harness/)
+[![DeepSeek Harness](https://img.shields.io/badge/DSH-0.1.5%20~%200.2.x-orange.svg)](https://deepseek.com/harness/)
 
 [English](README.md) | [繁體中文](README.zh-TW.md) | [简体中文](README.zh-CN.md)
 
@@ -29,7 +29,7 @@ An unofficial model provider plugin for [DeepSeek Harness](https://deepseek.com/
 
 ## Requirements
 
-1. **DeepSeek Harness:** `>=0.1.5-rc.1 <0.3.0` running on Node `>=20`.
+1. **DeepSeek Harness:** `0.1.5` ~ `0.2.x` (fully compatible with the latest `0.2.1` series), Node.js `>=20`.
 2. **Official Antigravity App:** Installed locally on Windows or macOS (Linux support in progress). Download from the [official portal](https://antigravity.google/product/antigravity-2). *The application does not need to be running.*
 3. **Google Account:** With browser consent capability and access to Gemini / Cloud Code Assist models.
 
