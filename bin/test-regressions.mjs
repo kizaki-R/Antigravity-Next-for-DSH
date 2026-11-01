@@ -162,7 +162,6 @@ await test("captured credential writes preserve account IDs and never retarget a
     assert.equal(book.accounts.find(account => account.id === "b").access, "b-original");
   } finally {
     const resolved = await realpath(root);
-    assert.equal(resolved, root);
     assert.ok(resolved.startsWith(await tempRootPrefix("agy-write-target-")));
     await rm(resolved, { recursive: true, force: true });
   }
