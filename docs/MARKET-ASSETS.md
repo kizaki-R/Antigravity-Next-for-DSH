@@ -2,49 +2,30 @@
 
 `screenshots.json` 列出 dsh-market 詳情頁要顯示的圖，路徑相對於 `agy-next/`。
 
-檔案還沒放進去之前，`screenshots.json` 指向的 4 個路徑都是空的。市場會去找檔案，找不到就是破圖。**所以上架前必須先補圖。**
+## 真實介面說明（依據 lib/ui.js 實作）
 
-## 規範（來自 awesome-dsh-plugin）
+設定頁面（**設定 → AGY-Next**）只有三大區塊，截圖只需反映這三個真實核心功能：
 
-| 項目 | 限制 |
-|---|---|
-| 數量 | 1 到 8 張 |
-| 路徑 | 相對路徑，不可開頭 `/`，不可含 `..` |
-| 絕對 URL | 只接受 GitHub 託管的 https |
-| 第三方圖床 | 不接受 |
-| 沒宣告 | 市場會自動從 README 抽圖 |
+1. **帳號池 (Account pool)**：右上角內建 **「自動切換 (Auto-switch)」** 開關，列表展示多帳號狀態（作用中、備用）與即時額度條（Gemini、Claude、Argon），點開可見 5 小時與每週倒數計時。
+2. **模型清單 (Models)**：各模型家族摺疊分組與勾選開關（控制是否在對話選單中顯示）。
+3. **本機安裝偵測 (Local AGY installation)**：底部的折疊面板。
 
-## 要拍的 4 張
+*(註：Gemini 4 Argon 思考強度是由模型調用時動態支援，設定頁面並無此滑桿，切勿造假。)*
 
-| 檔名 | 內容 | 備註 |
+---
+
+## 真正需要的 2～3 張截圖
+
+| 檔名 | 內容 | 說明 |
 |---|---|---|
-| `assets/screenshot-1.png` | 設定頁 → AGY-Next，帳號池（5 個帳號、三條配額條） | 最重要，放第一張 |
-| `assets/screenshot-2.png` | 模型清單（Gemini / Claude 系列） | 展示支援哪些模型 |
-| `assets/screenshot-3.png` | 自動切換設定與配額面板 | 展示多帳號能力 |
-| `assets/screenshot-4.png` | 登入流程或帳號切換 | 展示安裝後的第一步 |
+| `assets/screenshot-1.png` | **帳號池、配額面板與自動切換** | 設定頁主畫面：包含多帳號清單、額度條，以及右上角開啟的「自動切換」開關。<br>⚠️ **請將真實 Email 帳號打馬賽克**（如 `kiza***@gmail.com`）。 |
+| `assets/screenshot-2.png` | **模型清單與可見度控制** | 設定頁往下拉的「模型」面板：展示支援的 Gemini / Claude 各家族模型與勾選介面。 |
+| `assets/screenshot-3.png` *(選用)* | **會話模型選擇器** | 聊天對話頂部的模型下拉選單：展示 DSH 聊天框中成功辨識出 `Antigravity Next` 及其底下的可用模型。 |
 
-## 拍攝要求
+---
 
-- **必須是真實的 DSH 介面**。市場規範要求描述與截圖屬實，合成圖會被拒。
-- 建議 1600 × 1000（16:10）或 1920 × 1080（16:9）。
-- **遮蔽真實 email**。帳號池會顯示信箱，上架前要處理。
-- 單張小於 500 KB。
+## 圖片規格規範（awesome-dsh-plugin 要求）
 
-## icon
-
-| 項目 | 內容 |
-|---|---|
-| 路徑 | `assets/icon-512.png`（另存，不改 `icon.svg`） |
-| 格式 | PNG（**SVG 會被市場拒絕**） |
-| 尺寸 | 512 × 512，正方形，透明背景優先 |
-| 顯示環境 | 市場縮到約 96px，必須仍可辨識 |
-
-`icon.svg` 目前是佔位圖（檔案註解寫著 PLACEHOLDER）。市場要的是 PNG，所以另外放一張 `assets/icon-512.png`。
-
-## 補圖之後
-
-1. 把圖放進 `agy-next/assets/`
-2. 確認 `screenshots.json` 的路徑與檔名一致
-3. 確認 `package.json` 的 `files` 含 `assets` 與 `screenshots.json`（已加入）
-4. 跑 `npm pack --dry-run` 確認圖片有進 tarball
-5. 再上架
+- **截圖格式**：PNG，建議解析度 16:9 或 16:10（如 1920×1080 或 1600×1000）。
+- **真實介面**：必須是實際 DSH 運行畫面，嚴禁設計稿或假圖。
+- **Logo 圖示**：`assets/icon-512.png`（512×512 正方形 PNG，透明背景最佳，作為市場卡片圖示）。
