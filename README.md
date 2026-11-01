@@ -110,11 +110,12 @@ Add or edit the plugin section in your profile's `cordis.yml` if custom paramete
 
 ## Supported Models
 
-| Model Family | Key Variants | Features |
-|---|---|---|
-| **Gemini 4 Argon** | `gemini-4-argon` | Low / Medium / High reasoning effort, 5h & weekly quota tracking |
-| **Gemini Pro / Flash** | `gemini-2.5-pro`, `gemini-2.5-flash` | Multimodal streaming, tool invocation |
-| **Claude (3p)** | `claude-3-7-sonnet`, `claude-3-5-sonnet` | Integrated Cloud Code Assist Claude runtime |
+| Model Family | Key Models | Context Window | Key Capabilities |
+|---|---|---|---|
+| **Gemini 4 Argon** | `gemini-4-argon` | 1M tokens | Low / Medium / High reasoning efforts, 5h & weekly quota telemetry |
+| **Gemini 3 / 2.5** | `gemini-3.8-flash`, `gemini-3-flash`, `gemini-2.5-pro`, `gemini-2.5-flash` | 1M tokens | High-speed multimodal streaming, tool calling |
+| **Claude** | `claude-sonnet-5-5`, `claude-opus-5-5`, `claude-opus-4-6`, `claude-sonnet-4-6` | 1M tokens | Deep integration with Cloud Code Assist Claude runtime |
+| **Open Source** | `gpt-oss-120b` | 128k tokens | High-parameter open-weights inference |
 
 ---
 

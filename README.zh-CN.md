@@ -110,11 +110,12 @@ $env:AGY_NEXT_INSTALL_PATH = 'C:\Custom\Path\To\Antigravity'
 
 ## 支持模型列表
 
-| 模型系列 | 代表型号 | 特性支持 |
-|---|---|---|
-| **Gemini 4 Argon** | `gemini-4-argon` | Low / Medium / High 思考档位，5 小时与每周额度独立统计 |
-| **Gemini Pro / Flash** | `gemini-2.5-pro`、`gemini-2.5-flash` | 多模态流式交互，结构化工具调用 |
-| **Claude (3p)** | `claude-3-7-sonnet`、`claude-3-5-sonnet` | 深度集成 Cloud Code Assist 的 Claude 运行时 |
+| 模型系列 | 代表型号 | 上下文长度 | 特性支持 |
+|---|---|---|---|
+| **Gemini 4 Argon** | `gemini-4-argon` | 1M tokens | Low / Medium / High 思考档位，5 小时与每周额度独立统计 |
+| **Gemini 3 / 2.5** | `gemini-3.8-flash`、`gemini-3-flash`、`gemini-2.5-pro`、`gemini-2.5-flash` | 1M tokens | 高速多模态流式交互，工具调用 |
+| **Claude 系列** | `claude-sonnet-5-5`、`claude-opus-5-5`、`claude-opus-4-6`、`claude-sonnet-4-6` | 1M tokens | 深度集成 Cloud Code Assist 的 Claude 运行时 |
+| **开源模型** | `gpt-oss-120b` | 128k tokens | 大参数开源权重推理 |
 
 ---
 
