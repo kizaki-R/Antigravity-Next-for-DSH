@@ -1,5 +1,9 @@
 # Antigravity Next for DSH
 
+<p align="center">
+  <img src="./assets/banner-zh-CN.png" alt="Antigravity Next for DSH 横幅" width="100%" />
+</p>
+
 [![CI](https://github.com/kizaki-R/Antigravity-Next-for-DSH/actions/workflows/ci.yml/badge.svg)](https://github.com/kizaki-R/Antigravity-Next-for-DSH/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](package.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
