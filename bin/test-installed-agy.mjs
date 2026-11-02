@@ -84,8 +84,9 @@ async function rejects(fn, code) {
 try {
   await test('explicit install / vendor-scoped ASAR schema / return shape', async () => {
     const f = await fixture(); const r = await discoverInstalledAgy(f.options);
-    assert.deepEqual(Object.keys(r).sort(), ['clientId', 'clientSecret', 'installPath', 'sourcePath', 'version']);
+    assert.deepEqual(Object.keys(r).sort(), ['clientId', 'clientSecret', 'installPath', 'kind', 'sourcePath', 'version']);
     assert.equal(r.clientId, id); assert.equal(r.clientSecret, secret); assert.equal(r.version, pkg.version);
+    assert.equal(r.kind, 'desktop');
     assert.ok(r.sourcePath.endsWith('app.asar!/package.json'));
   });
   await test('missing installation, relative override, safe errors', async () => {
@@ -264,6 +265,163 @@ try {
   await test('unknown native platforms fail closed', async () => {
     const f = await fixture({ client: false, binary: native(), platform: 'linux' }); await rejects(() => discoverInstalledAgy(f.options), 'UNSUPPORTED_NATIVE');
   });
+
+  // ---- IDE layout: a VS Code fork, no ASAR, client as adjacent JS constants ----
+  const IDE_MODULE = 'cloudCode/common/oauthClient';
+  const ideId = '987654321098-' + 'c'.repeat(24) + '.apps.googleusercontent.com';
+  const ideSecret = 'GOCSPX-' + 'd'.repeat(28);
+  const ideAltId = '111111111111-' + 'e'.repeat(24) + '.apps.googleusercontent.com';
+  const ideAltSecret = 'GOCSPX-' + 'f'.repeat(28);
+  /** Bundle text shaped like the observed minified assignment list. */
+  function ideBundle({ first = ideId, firstSecret = ideSecret, second = ideAltId, secondSecret = ideAltSecret, marker = true } = {}) {
+    const vars = ['q1', 'q2', 'q3', 'q4'];
+    const body = `x=${vars[0]}="this is filler content before the module"},${vars[0]},${vars[1]},` +
+      `${vars[2]},${vars[3]},m=q({"out-build/vs/platform/${IDE_MODULE}.js"(){"use strict";` +
+      `${vars[0]}="${first}",${vars[1]}="${firstSecret}",` +
+      (second ? `${vars[2]}="${second}",${vars[3]}="${secondSecret}",` : '') +
+      `scopes=["https://www.googleapis.com/auth/cloud-platform"]}});tail`;
+    return marker ? body : body.replace(IDE_MODULE, 'some/other/module');
+  }
+  /**
+   * IDE install root. `name` is the folder name the discovery expects; a
+   * LOCALAPPDATA scratch tree makes the candidate list land on this fixture.
+   */
+  async function ideFixture({ bundle, manifest, platform = 'win32', folder = 'Antigravity IDE' } = {}) {
+    const root = join(temporary, `ide-${++serial}`);
+    const app = platform === 'darwin' ? join(root, 'Contents', 'Resources', 'app') : join(root, 'resources', 'app');
+    await mkdir(join(app, 'out'), { recursive: true });
+    await writeFile(join(app, 'package.json'), manifest ?? JSON.stringify({ name: 'Antigravity IDE', version: '1.107.0' }));
+    await writeFile(join(app, 'out', 'main.js'), bundle ?? ideBundle());
+    return { root, app, folder };
+  }
+  /** Env whose only candidate is the IDE under `Programs`. */
+  async function ideEnv(fixtureRoot, folder = 'Antigravity IDE') {
+    const local = join(temporary, `local-${++serial}`);
+    await mkdir(join(local, 'Programs'), { recursive: true });
+    await symlink(fixtureRoot, join(local, 'Programs', folder), 'junction');
+    return { env: { LOCALAPPDATA: local, ProgramFiles: join(local, 'pf'), 'ProgramFiles(x86)': join(local, 'pf86') }, platform: 'win32', cache: false };
+  }
+
+  await test('IDE install is discovered when no desktop build exists', async () => {
+    const f = await ideFixture();
+    const options = await ideEnv(f.root);
+    const r = await discoverInstalledAgy(options);
+    assert.equal(r.kind, 'ide');
+    assert.equal(r.clientId, ideId);
+    assert.equal(r.clientSecret, ideSecret);
+    assert.equal(r.version, '1.107.0');
+    assert.ok(r.sourcePath.includes(`main.js!`), r.sourcePath);
+    assert.ok(r.sourcePath.endsWith(IDE_MODULE), r.sourcePath);
+  });
+
+  await test('desktop build wins when both layouts are installed', async () => {
+    const desktop = await fixture(), ide = await ideFixture();
+    const local = join(temporary, `local-${++serial}`);
+    await mkdir(join(local, 'Programs'), { recursive: true });
+    await symlink(desktop.root, join(local, 'Programs', 'antigravity'), 'junction');
+    await symlink(ide.root, join(local, 'Programs', 'Antigravity IDE'), 'junction');
+    const r = await discoverInstalledAgy({ env: { LOCALAPPDATA: local, ProgramFiles: join(local, 'pf'), 'ProgramFiles(x86)': join(local, 'pf86') }, platform: 'win32', cache: false });
+    assert.equal(r.kind, 'desktop');
+    assert.equal(r.clientId, id);
+  });
+
+  await test('IDE default client is the first pair inside the oauthClient module', async () => {
+    const f = await ideFixture();
+    const r = await discoverInstalledAgy(await ideEnv(f.root));
+    // The personal-account client comes first; the enterprise client must not win.
+    assert.equal(r.clientId, ideId);
+    assert.notEqual(r.clientId, ideAltId);
+  });
+
+  await test('IDE identity and readability failures are reported apart from absence', async () => {
+    // Wrong product name inside the folder: an IDE folder that is not the IDE.
+    const wrong = await ideFixture({ manifest: JSON.stringify({ name: 'Something Else', version: '1.0.0' }) });
+    const wrongOptions = await ideEnv(wrong.root);
+    await rejects(() => discoverInstalledAgy(wrongOptions), 'IDE_IDENTITY_MISMATCH');
+    // Right folder, right manifest, but the bundle lost the module marker.
+    const moved = await ideFixture({ bundle: ideBundle({ marker: false }) });
+    const movedOptions = await ideEnv(moved.root);
+    await rejects(() => discoverInstalledAgy(movedOptions), 'IDE_CLIENT_UNREADABLE');
+    // Right folder and manifest, but no pair at all.
+    const empty = await ideFixture({ bundle: ideBundle({ first: '000000000000-' + 'a'.repeat(24) + '.apps.googleusercontent.com', second: null }).replace(/GOCSPX-[A-Za-z0-9_-]{28}/g, 'GOCSPX-short') });
+    const emptyOptions = await ideEnv(empty.root);
+    await rejects(() => discoverInstalledAgy(emptyOptions), 'IDE_CLIENT_UNREADABLE');
+    // Missing main.js entirely.
+    const noBundle = await ideFixture();
+    await rm(join(noBundle.app, 'out', 'main.js'));
+    const noBundleOptions = await ideEnv(noBundle.root);
+    await rejects(() => discoverInstalledAgy(noBundleOptions), 'IDE_CLIENT_UNREADABLE');
+  });
+
+  await test('IDE never cross-pairs a client with a distant secret', async () => {
+    // The client id is followed by a statement, not an assignment. Reaching past
+    // that to grab the later secret literal would be a cross-pair, which must be
+    // refused: the code then reports an unreadable client instead of guessing.
+    const stray = 'console.warn("unrelated"),b=' + 'x'.repeat(40) + ',c="';
+    const bundle = `m=q({"out-build/vs/platform/${IDE_MODULE}.js"(){"use strict";a="${ideId}",` +
+      `${stray}GOCSPX-${'d'.repeat(28)}"}});`;
+    const f = await ideFixture({ bundle });
+    const options = await ideEnv(f.root);
+    await rejects(() => discoverInstalledAgy(options), 'IDE_CLIENT_UNREADABLE');
+  });
+
+  await test('IDE with too many distinct clients fails closed', async () => {
+    const third = '222222222222-' + 'b'.repeat(24) + '.apps.googleusercontent.com';
+    const f = await ideFixture({ bundle: ideBundle({ second: ideAltId, secondSecret: ideAltSecret }) });
+    const text = await (await import('node:fs/promises')).readFile(join(f.app, 'out', 'main.js'), 'utf8');
+    const extra = text.replace('scopes=[', `t1="${third}",t2="GOCSPX-${'a'.repeat(28)}",scopes=[`);
+    await writeFile(join(f.app, 'out', 'main.js'), extra);
+    const options = await ideEnv(f.root);
+    await rejects(() => discoverInstalledAgy(options), 'IDE_CLIENT_AMBIGUOUS');
+  });
+
+  await test('IDE resources are read from Contents/Resources on macOS', async () => {
+    // macOS candidates are absolute /Applications paths, so the fixture is built
+    // as a .app bundle and exercised through the same env-driven candidate list by
+    // pointing LOCALAPPDATA at a tree that holds it under the expected name. The
+    // bundle layout (Contents/Resources/app) is what this case pins down.
+    const root = join(temporary, `ide-mac-${++serial}`);
+    const app = join(root, 'Contents', 'Resources', 'app');
+    await mkdir(join(app, 'out'), { recursive: true });
+    await writeFile(join(app, 'package.json'), JSON.stringify({ name: 'Antigravity IDE', version: '1.107.0' }));
+    await writeFile(join(app, 'out', 'main.js'), ideBundle());
+    // A bundle without Contents/Resources/app must not be mistaken for an IDE.
+    const flat = join(temporary, `ide-flat-${++serial}`);
+    await mkdir(join(flat, 'resources', 'app', 'out'), { recursive: true });
+    await writeFile(join(flat, 'resources', 'app', 'package.json'), JSON.stringify({ name: 'Antigravity IDE', version: '1.0.0' }));
+    await writeFile(join(flat, 'resources', 'app', 'out', 'main.js'), ideBundle());
+    const options = await ideEnv(root);
+    // win32 candidates look for resources/app, so the bundle root (no such folder)
+    // must not resolve; this pins the platform-specific Resources choice.
+    await rejects(() => discoverInstalledAgy(options), 'INSTALL_NOT_FOUND');
+    const flatOptions = await ideEnv(flat);
+    const r = await discoverInstalledAgy(flatOptions);
+    assert.equal(r.kind, 'ide');
+    assert.equal(r.clientId, ideId);
+  });
+
+  await test('diagnostics report names candidates without exposing paths', async () => {
+    const { diagnoseEnvironment } = await import('../lib/status.js');
+    const report = diagnoseEnvironment({
+      env: { LOCALAPPDATA: 'C:\\Users\\somebody\\AppData\\Local', ProgramFiles: 'C:\\Program Files', 'ProgramFiles(x86)': 'C:\\Program Files (x86)' },
+      platform: 'win32',
+    });
+    const text = JSON.stringify(report);
+    // Labels and presence are reported; the user's home path never is.
+    assert.ok(Array.isArray(report.candidates) && report.candidates.length >= 2);
+    for (const candidate of report.candidates) {
+      assert.equal(typeof candidate.label, 'string');
+      assert.equal(typeof candidate.exists, 'boolean');
+      assert.deepEqual(Object.keys(candidate).sort(), ['exists', 'label']);
+    }
+    assert.ok(!/somebody/i.test(text), 'user name leaked');
+    assert.ok(!/Users\\\\/i.test(text) && !/Users\//i.test(text), 'home path leaked');
+    assert.equal(report.installPathOverride, 'not set');
+    const overridden = diagnoseEnvironment({ env: { AGY_NEXT_INSTALL_PATH: 'C:\\Users\\somebody\\agy' }, platform: 'win32' });
+    assert.ok(!/somebody/i.test(JSON.stringify(overridden)), 'override value leaked');
+    assert.match(overridden.installPathOverride, /set/);
+  });
+
   console.log(`Passed ${passed} installed-Antigravity tests (synthetic fixtures only).`);
 } finally {
   // The target is a verified, newly created temp directory, never a user install.

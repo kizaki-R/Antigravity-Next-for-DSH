@@ -4,20 +4,42 @@
 
 ---
 
-## [Unreleased]
+## [1.1.0] - 2026-11-03
+
+### 新功能：支援 Antigravity IDE
+- **問題**：只安裝官方 **Antigravity IDE** 的使用者，設定頁一律顯示「🔴 未找到」。IDE 是 VS Code 分支，沒有 `resources/app.asar`，而既有的偵測只認桌面版的 ASAR 佈局，因此連候選路徑都沒有涵蓋，使用者無法判斷是「沒裝」還是「不支援」。
+- **根因**：`candidates()` 只列出桌面版路徑（`Programs\antigravity`、`ProgramFiles\Antigravity`）。IDE 版安裝在 `Programs\Antigravity IDE`，且把 OAuth client 以相鄰字串常數內嵌在 `resources/app/out/main.js` 的 `cloudCode/common/oauthClient` 模組中，而非 ASAR 內的 JSON。
+- **解決**：
+  - **新增 IDE 偵測分支**：找不到桌面版時，改走 `ideClient()`。先讀 `resources/app/package.json` 驗證 `name === "Antigravity IDE"`，再定位 `cloudCode/common/oauthClient` 模組，只讀取該錨點周邊的有限視窗（`IDE_MODULE_WINDOW`），不載入整份 14 MB 以上的 bundle。
+  - **安全配對**：client id 與 secret 必須以賦值語法相鄰（`IDE_PAIR_GAP`），不會跨語句湊對。模組內出現超過兩組不同 client 時 fail closed（`IDE_CLIENT_AMBIGUOUS`），不做猜測。
+  - **桌面版優先**：兩種佈局並存時一律採用桌面版。其 ASAR schema 長期穩定，IDE 的 bundle 則可能隨任一版本重構。
+  - **回傳值新增 `kind`**：`"desktop"` 或 `"ide"`，設定頁可標示用戶端來源。
+- **驗證**：以本機實際安裝的 IDE（1.107.0）取出 client，並於 Google 同意畫面確認該 client 被接受且 redirect URI 有效。經比對，IDE 提供的 client 與桌面版為同一個，兩者等價。
+- **未支援**：IDE 的登入狀態（token）。那屬於使用者本人的授權憑證而非應用程式身分，外掛維持只讀取應用程式內建的 client，登入一律走 Google 同意畫面。
+
+### 新功能：環境診斷報告
+- **問題**：使用者回報「偵測不到」時，維護者拿不到 OS、版本、候選路徑是否存在等基本事實，只能反覆來回詢問。
+- **解決**：新增 `GET /agy-next/api/diagnostics` 與設定頁的「複製診斷報告」按鈕。報告包含作業系統、Node／Electron 版本、`AGY_NEXT_INSTALL_PATH` 是否設定（值不輸出）、各候選路徑**是否存在**（只給標籤與布林值，不給完整路徑），以及目前的安裝判定代碼。
+- **隱私邊界**：報告不含帳號、token、client 值或任何個人絕對路徑，並有自動檢查確保此性質。
+
+### 改進：IDE 失敗的錯誤訊息
+- 新增 `IDE_CLIENT_UNREADABLE`、`IDE_IDENTITY_MISMATCH`、`IDE_CLIENT_AMBIGUOUS` 三個代碼，三語系皆有對應文案。使用者裝了 IDE 但讀不到時，訊息會明說「偵測到 Antigravity IDE，但無法讀取其用戶端設定」，而不是含糊的「未找到」。
 
 ### 修正：v1.0.1 的 npm 套件與 repository 不一致
 - **問題**：從 npm 安裝 1.0.1 的使用者，設定頁標題旁仍會看到灰色 `u29` 建置標記；但 GitHub 上的 `a0e7165` 已移除該標記。
 - **根因**：`npm publish` 發布的是當下工作目錄，不是 git ref。1.0.1 於 `2026-11-02 04:55` 發布，而移除標記的 commit `fa724a9` 直到同日 `14:01` 才進入歷史。CHANGELOG 描述的是 repository 狀態，tarball 卻早於它。
-- **解決**：新增 `bin/publish-guard.mjs`，掛進 `prepublishOnly`。發布前若工作區有任何未提交的已追蹤檔案變更、或 HEAD 的 tag 與 `package.json` 版本不符，直接阻擋。
+- **解決**：新增 `bin/publish-guard.mjs`，掛進 `prepublishOnly`。發布前若工作區有未提交的已追蹤檔案變更、HEAD 領先遠端，或 HEAD 的 tag 與 `package.json` 版本不符，直接阻擋並給出對應的下一步指令。
 - **技術債清理**：移除 `lib/ui.js` 中已無渲染用途的 `UI_BUILD` 常數與 `.agyn-build` CSS。
 
 ### 維護性
 - **npm 中繼資料修正**：移除 `package.json` 中錯誤的 `repository.directory` 欄位。公開倉庫的根目錄即為外掛本體，原值會讓 npm 的 Repository 連結指向不存在的 `agy-next/` 子目錄。
-- **模組計數校正**：README（英／繁中）與 `AGENTS.md` 的語法檢查檔數更新為實際值。
 - **發布防護**：`prepublishOnly` 依序執行 `publish-guard` → `npm run check` → `npm test`。
 - **公開邊界掃描**：CI 新增獨立 `safety` job，檢查本機 Windows 使用者路徑、私有工作區 junction 名稱、對話備份路徑、Gmail 位址、疑似 Google OAuth client secret 與私鑰區塊。
 - **主機契約可驗證化**：新增 `bin/verify-peers.mjs` 與 `verify:peers` 腳本。原本 `npm run verify` 在一般 checkout 會直接以 exit 2 中止，使 `check-offline.mjs` 的主機契約斷言從未真正執行；現在可透過 `AGY_PEER_ROOT` 指向 peer 套件後完整跑完。
+
+---
+
+## [Unreleased]
 
 ---
 
