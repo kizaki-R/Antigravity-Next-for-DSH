@@ -14,7 +14,8 @@
  *
  *   - every tracked file must match HEAD (no uncommitted edits)
  *   - no tracked file may be deleted
- *   - HEAD must be clean, so the version tag can point at what shipped
+ *   - HEAD must already exist on the remote, so strangers can audit the tarball
+ *   - the version tag, when present, must agree with package.json
  *
  * Untracked files are allowed: npm honours `files`, and scratch output is not
  * part of the package.
@@ -52,6 +53,25 @@ if (status) {
 const head = run(["rev-parse", "--short", "HEAD"]);
 const version = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 
+// The published tarball must be reachable from the public repository, or nobody
+// can audit what shipped. A branch with no upstream cannot be checked, so it is
+// treated the same as being behind: refuse, and say which command fixes it.
+let upstream = null;
+try {
+  upstream = run(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
+} catch {
+  upstream = null;
+}
+if (!upstream) {
+  fatal("the current branch has no upstream, so the published commit could not be found on the remote.",
+    "Set one with: git push --set-upstream origin <branch>");
+}
+const ahead = Number(run(["rev-list", "--count", `@{u}..HEAD`]));
+if (Number.isFinite(ahead) && ahead > 0) {
+  fatal(`HEAD is ${ahead} commit${ahead === 1 ? "" : "s"} ahead of ${upstream}.`,
+    "Push first, so the tarball's commit exists on the remote:\n    git push");
+}
+
 // The tag is optional on a first publish but, when present, must agree.
 let tag;
 try {
@@ -63,4 +83,4 @@ if (tag && tag !== `v${version}` && tag !== version) {
   fatal(`HEAD is tagged ${tag} but package.json says ${version}.`, "Tag and version must agree so the release is traceable.");
 }
 
-console.log(`[publish guard] ok — publishing agy-next@${version} from ${head}${tag ? ` (${tag})` : ""}`);
+console.log(`[publish guard] ok — publishing agy-next@${version} from ${head}${tag ? ` (${tag})` : ""}, pushed to ${upstream}`);
