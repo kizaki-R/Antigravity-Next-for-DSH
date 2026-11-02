@@ -30,3 +30,44 @@ jobs:
 
       - name: Run offline regression test suite
         run: npm test
+
+  safety:
+    name: Public boundary scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Scan tracked files for local paths and secrets
+        shell: bash
+        run: |
+          set -uo pipefail
+          status=0
+
+          # The scan patterns live in this workflow file, and AGENTS.md documents
+          # the forbidden strings on purpose. Exclude both, or the job always fails
+          # against itself.
+          excluded=(':!.github/workflows/*' ':!AGENTS.md')
+
+          scan() {
+            local label="$1" pattern="$2"
+            if git grep -nEI "$pattern" -- . "${excluded[@]}"; then
+              echo "::error::$label"
+              status=1
+            fi
+          }
+
+          scan "Found a local Windows user path" 'C:[\\/]Users[\\/][^<%$]'
+          scan "Found the private workspace junction name" 'multi-agy2dsh'
+          scan "Found a session backup path" '_session-cwd-backup'
+          scan "Found a Gmail address" '[A-Za-z0-9._%+-]+@gmail\.com'
+          scan "Found a plausible Google OAuth client secret" 'GOCSPX-[A-Za-z0-9_-]{20,}'
+          scan "Found a private key block" 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY'
+
+          if [ "$status" -ne 0 ]; then
+            echo "Public boundary scan failed."
+          else
+            echo "Public boundary scan passed."
+          fi
+          exit "$status"

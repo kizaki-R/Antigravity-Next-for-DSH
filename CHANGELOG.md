@@ -4,6 +4,17 @@
 
 ---
 
+## [Unreleased]
+
+### 維護性
+- **npm 中繼資料修正**：移除 `package.json` 中錯誤的 `repository.directory` 欄位。公開倉庫的根目錄即為外掛本體，原值會讓 npm 的 Repository 連結指向不存在的 `agy-next/` 子目錄。
+- **模組計數校正**：README（英／繁中）與 `AGENTS.md` 的語法檢查檔數由 39 更新為實際的 40。
+- **發布防護**：新增 `prepublishOnly` 腳本，發布前自動執行 `npm run check` 與 `npm test`。
+- **公開邊界掃描**：CI 新增獨立 `safety` job，檢查本機 Windows 使用者路徑、私有工作區 junction 名稱、對話備份路徑、Gmail 位址、疑似 Google OAuth client secret 與私鑰區塊。
+- **主機契約可驗證化**：新增 `bin/verify-peers.mjs` 與 `verify:peers` 腳本。原本 `npm run verify` 在一般 checkout 會直接以 exit 2 中止，使 `check-offline.mjs` 的主機契約斷言從未真正執行；現在可透過 `AGY_PEER_ROOT` 指向 peer 套件後完整跑完。
+
+---
+
 ## [1.0.1] - 2026-11-02
 
 ### UI & Branding
