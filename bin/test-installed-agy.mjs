@@ -539,6 +539,33 @@ try {
     assert.equal(r3.root, ide.root);
   });
 
+  await test('resolveCustomInstallPath pierces Windows .lnk shortcuts and shortcut folders', async () => {
+    if (process.platform !== 'win32') return;
+    const ide = await ideFixture();
+    // Build a synthetic Windows Shell Link buffer pointing to ide.root
+    const targetPath = ide.root;
+    const buf = Buffer.alloc(76 + 256);
+    buf.writeUInt32LE(0x4c, 0); // HeaderSize
+    buf.write(targetPath, 76, 'ascii');
+
+    const shortcutDir = join(temporary, `start-menu-${++serial}`);
+    await mkdir(shortcutDir);
+    const lnkPath = join(shortcutDir, 'Antigravity IDE.lnk');
+    await writeFile(lnkPath, buf);
+
+    // 1. Direct .lnk file
+    const r1 = await resolveCustomInstallPath(lnkPath);
+    assert.equal(r1.ok, true);
+    assert.equal(r1.kind, 'ide');
+    assert.equal(r1.root, ide.root);
+
+    // 2. Folder containing the .lnk file
+    const r2 = await resolveCustomInstallPath(shortcutDir);
+    assert.equal(r2.ok, true);
+    assert.equal(r2.kind, 'ide');
+    assert.equal(r2.root, ide.root);
+  });
+
   console.log(`Passed ${passed} installed-Antigravity tests (synthetic fixtures only).`);
 } finally {
   // The target is a verified, newly created temp directory, never a user install.
