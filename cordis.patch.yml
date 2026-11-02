@@ -23,6 +23,16 @@
       #     streamIdleTimeoutMs: 600000
       #     projectId: aicode-consumers
       #
+      # `clientSource` decides which official build supplies the OAuth client:
+      #
+      #   auto     (default) prefer the desktop build, fall back to the IDE when
+      #            the desktop build is missing or its client cannot be read
+      #   desktop  use only the desktop build
+      #   ide      use only the Antigravity IDE
+      #
+      # Only set this to pin a layout for debugging. Leaving it at auto already
+      # handles "IDE only" and "both installed" correctly.
+      #
       # Secrets stay cordis-native: point a field at the environment with
       # `!!js process.env.X` rather than reading a key file in code.
       config: {}

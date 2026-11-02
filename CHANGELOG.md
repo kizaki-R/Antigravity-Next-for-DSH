@@ -22,6 +22,12 @@
 - **解決**：新增 `GET /agy-next/api/diagnostics` 與設定頁的「複製診斷報告」按鈕。報告包含作業系統、Node／Electron 版本、`AGY_NEXT_INSTALL_PATH` 是否設定（值不輸出）、各候選路徑**是否存在**（只給標籤與布林值，不給完整路徑），以及目前的安裝判定代碼。
 - **隱私邊界**：報告不含帳號、token、client 值或任何個人絕對路徑，並有自動檢查確保此性質。
 
+### 新功能：`clientSource` 來源偏好與 auto 容錯
+- **設定**：新增 `clientSource` 欄位（`auto` / `desktop` / `ide`），可用 `cordis.yml` 或環境變數 `AGY_NEXT_CLIENT_SOURCE` 指定。預設 `auto`。
+- **`auto` 具容錯**：桌面版存在但用戶端讀不出來時，會自動改試 IDE，而不是直接報錯讓使用者卡住。這是本次改動對實際使用者最有價值的一項：桌面版損壞不再等於完全不能用。
+- **`desktop` / `ide` 為除錯用途**：釘選單一佈局，該佈局不在就明確失敗，不會靜默改用另一個。適合需要確認「到底是哪一個在提供 client」的場合。
+- 介面會標示實際來源（`已就緒 · 桌面版` 或 `已就緒 · IDE`），搭配 `auto` 容錯時使用者能看出最後用了哪一個。
+
 ### 改進：IDE 失敗的錯誤訊息
 - 新增 `IDE_CLIENT_UNREADABLE`、`IDE_IDENTITY_MISMATCH`、`IDE_CLIENT_AMBIGUOUS` 三個代碼，三語系皆有對應文案。使用者裝了 IDE 但讀不到時，訊息會明說「偵測到 Antigravity IDE，但無法讀取其用戶端設定」，而不是含糊的「未找到」。
 

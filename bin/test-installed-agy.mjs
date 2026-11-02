@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { discoverInstalledAgy, InstalledAgyError } from '../lib/installed-agy.js';
+import { diagnoseEnvironment } from '../lib/status.js';
 
 const cleanupFs = process.versions.electron === undefined
   ? { rm }
@@ -400,8 +401,59 @@ try {
     assert.equal(r.clientId, ideId);
   });
 
+  // ---- clientSource policy: auto / desktop / ide ----
+  await test('clientSource pins one layout and refuses the other', async () => {
+    const ide = await ideFixture();
+    const ideOptions = await ideEnv(ide.root);
+    // Pinned to the desktop build: an IDE-only machine must fail, not fall back.
+    await rejects(() => discoverInstalledAgy({ ...ideOptions, clientSource: 'desktop' }), 'INSTALL_NOT_FOUND');
+    // Pinned to the IDE: the same machine succeeds.
+    const viaIde = await discoverInstalledAgy({ ...ideOptions, clientSource: 'ide' });
+    assert.equal(viaIde.kind, 'ide');
+
+    const desktop = await fixture();
+    // Pinned to the IDE: a desktop-only machine must fail.
+    await rejects(() => discoverInstalledAgy({ installPath: desktop.root, platform: 'win32', cache: false, clientSource: 'ide' }), 'INSTALL_NOT_FOUND');
+    // Auto still finds the desktop build.
+    const viaAuto = await discoverInstalledAgy({ installPath: desktop.root, platform: 'win32', cache: false, clientSource: 'auto' });
+    assert.equal(viaAuto.kind, 'desktop');
+  });
+
+  await test('clientSource=ide wins over an installed desktop build', async () => {
+    const desktop = await fixture(), ide = await ideFixture();
+    const local = join(temporary, `local-${++serial}`);
+    await mkdir(join(local, 'Programs'), { recursive: true });
+    await symlink(desktop.root, join(local, 'Programs', 'antigravity'), 'junction');
+    await symlink(ide.root, join(local, 'Programs', 'Antigravity IDE'), 'junction');
+    const env = { LOCALAPPDATA: local, ProgramFiles: join(local, 'pf'), 'ProgramFiles(x86)': join(local, 'pf86') };
+    const auto = await discoverInstalledAgy({ env, platform: 'win32', cache: false });
+    assert.equal(auto.kind, 'desktop');
+    const forced = await discoverInstalledAgy({ env, platform: 'win32', cache: false, clientSource: 'ide' });
+    assert.equal(forced.kind, 'ide');
+    assert.equal(forced.clientId, ideId);
+  });
+
+  await test('auto falls back to the IDE when the desktop build is unreadable', async () => {
+    // A desktop install whose ASAR holds no client and no native helper: the
+    // build exists (so this is not "not installed") but cannot supply a client.
+    const broken = await fixture({ client: false, extra: { 'dist/unrelated.json': '{"x":1}' } });
+    const ide = await ideFixture();
+    const local = join(temporary, `local-${++serial}`);
+    await mkdir(join(local, 'Programs'), { recursive: true });
+    await symlink(broken.root, join(local, 'Programs', 'antigravity'), 'junction');
+    await symlink(ide.root, join(local, 'Programs', 'Antigravity IDE'), 'junction');
+    const env = { LOCALAPPDATA: local, ProgramFiles: join(local, 'pf'), 'ProgramFiles(x86)': join(local, 'pf86') };
+
+    // auto: the working IDE rescues the user.
+    const rescued = await discoverInstalledAgy({ env, platform: 'win32', cache: false });
+    assert.equal(rescued.kind, 'ide');
+    assert.equal(rescued.clientId, ideId);
+
+    // desktop: pinned, so the real failure surfaces instead of a silent switch.
+    await rejects(() => discoverInstalledAgy({ env, platform: 'win32', cache: false, clientSource: 'desktop' }), 'CLIENT_NOT_FOUND');
+  });
+
   await test('diagnostics report names candidates without exposing paths', async () => {
-    const { diagnoseEnvironment } = await import('../lib/status.js');
     const report = diagnoseEnvironment({
       env: { LOCALAPPDATA: 'C:\\Users\\somebody\\AppData\\Local', ProgramFiles: 'C:\\Program Files', 'ProgramFiles(x86)': 'C:\\Program Files (x86)' },
       platform: 'win32',
