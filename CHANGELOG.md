@@ -6,6 +6,11 @@
 
 ## [1.1.0] - 2026-11-03
 
+### 修正：頁尾版本號寫死
+- **問題**：設定頁頁尾固定顯示 `npm v1.0.0`，即使安裝的是更新版本。
+- **根因**：`lib/ui.js` 把版本寫成字面量。瀏覽器端讀不到 `package.json`，但 `/status` 早已回傳 `version`，只是沒有被使用。
+- **解決**：頁尾改讀 `status.version`（由主機端讀取 `package.json` 填入）。新增 `bin/check-ui-versions.mjs` 並納入 `npm run check`，偵測到寫死的版本字面量即失敗，防止再次漂移。
+
 ### 新功能：支援 Antigravity IDE
 - **問題**：只安裝官方 **Antigravity IDE** 的使用者，設定頁一律顯示「🔴 未找到」。IDE 是 VS Code 分支，沒有 `resources/app.asar`，而既有的偵測只認桌面版的 ASAR 佈局，因此連候選路徑都沒有涵蓋，使用者無法判斷是「沒裝」還是「不支援」。
 - **根因**：`candidates()` 只列出桌面版路徑（`Programs\antigravity`、`ProgramFiles\Antigravity`）。IDE 版安裝在 `Programs\Antigravity IDE`，且把 OAuth client 以相鄰字串常數內嵌在 `resources/app/out/main.js` 的 `cloudCode/common/oauthClient` 模組中，而非 ASAR 內的 JSON。
