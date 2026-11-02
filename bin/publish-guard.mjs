@@ -28,7 +28,6 @@ const run = (args) => execFileSync("git", args, { encoding: "utf8", stdio: ["ign
 function fatal(message, detail) {
   console.error(`\n[publish guard] ${message}`);
   if (detail) console.error(detail);
-  console.error("\nPublishing was blocked. Commit the change first, then publish from that commit.");
   process.exit(1);
 }
 
@@ -47,7 +46,7 @@ if (!insideRepo) {
 // Tracked modifications: staged, unstaged, and deletions all count.
 const status = run(["status", "--porcelain", "--untracked-files=no"]);
 if (status) {
-  fatal("the working tree has uncommitted changes to tracked files.", status);
+  fatal("the working tree has uncommitted changes to tracked files.", `${status}\n\nPublishing was blocked. Commit first, then publish from that commit:\n    git commit -am "..."`);
 }
 
 const head = run(["rev-parse", "--short", "HEAD"]);
@@ -64,12 +63,12 @@ try {
 }
 if (!upstream) {
   fatal("the current branch has no upstream, so the published commit could not be found on the remote.",
-    "Set one with: git push --set-upstream origin <branch>");
+    'Publishing was blocked. Set an upstream first:\n    git push --set-upstream origin <branch>');
 }
 const ahead = Number(run(["rev-list", "--count", `@{u}..HEAD`]));
 if (Number.isFinite(ahead) && ahead > 0) {
   fatal(`HEAD is ${ahead} commit${ahead === 1 ? "" : "s"} ahead of ${upstream}.`,
-    "Push first, so the tarball's commit exists on the remote:\n    git push");
+    "Publishing was blocked. Push first, so the tarball's commit exists on the remote:\n    git push");
 }
 
 // The tag is optional on a first publish but, when present, must agree.
@@ -80,7 +79,8 @@ try {
   tag = null;
 }
 if (tag && tag !== `v${version}` && tag !== version) {
-  fatal(`HEAD is tagged ${tag} but package.json says ${version}.`, "Tag and version must agree so the release is traceable.");
+  fatal(`HEAD is tagged ${tag} but package.json says ${version}.`,
+    `Publishing was blocked. Keep the tag and the version in step:\n    git tag -d ${tag}\n    git tag v${version}`);
 }
 
 console.log(`[publish guard] ok — publishing agy-next@${version} from ${head}${tag ? ` (${tag})` : ""}, pushed to ${upstream}`);
