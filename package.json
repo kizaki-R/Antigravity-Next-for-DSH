@@ -1,6 +1,6 @@
 {
   "name": "agy-next",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Antigravity provider for DeepSeek Harness — requires the official locally installed Antigravity app",
   "type": "module",
   "main": "lib/index.js",

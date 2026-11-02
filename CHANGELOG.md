@@ -4,6 +4,29 @@
 
 ---
 
+## [1.0.1] - 2026-11-02
+
+### UI & Branding
+- **Custom Settings Nav Icon**: Decorate the settings sidebar navigation button with the Antigravity Next vector mark, replacing DSH's generic fallback gear.
+- **Header Actions Layout**: Move GitHub shortcut button to the left of the language switcher; preserve the refresh button at the far right.
+- **Center Action Icons**: Fix button centering in the top header via `inline-grid`.
+- **Remove Build Stamp**: Retire internal `u29` debug badge from the header title.
+- **Footer Community Links**: Add footer bar linking to maintainer profile (@kizaki-R), GitHub repository, issue tracker, and npm package.
+
+### Documentation & Supported Models
+- **Accurate Model Roster**: Correct model matrix to list upstream Antigravity Claude models (`claude-sonnet-5-5`, `claude-opus-5-5`, `claude-opus-4-6`, `claude-sonnet-4-6`), `gemini-3.8-flash`, `gemini-3-flash`, and `gpt-oss-120b`.
+- **Context Windows & Reasoning**: Document 1M token context windows for Gemini and Claude models; clarify reasoning effort support across Argon, Flash 3.8, and Claude.
+- **DSH Version Guidance**: Clarify compatibility as `0.1.5` ~ `0.2.x` (verified through `0.2.1`).
+
+### Testing & CI
+- **macOS Temp Directory Assertions**: Canonicalise temp directories using `realpath` before prefix assertions, resolving test failures on macOS where `/var` symlinks to `/private/var`.
+- **Syntax Coverage**: Include `bin/peer-resolve.mjs` and `bin/test-peers.mjs` in `npm run check`, bringing coverage to all 40 modules.
+
+### Community Governance
+- **Contributing Guidelines**: Add `CONTRIBUTING.md` outlining the issue-first proposal workflow, local verification checklist, and confidential security disclosure channels.
+
+---
+
 ## [1.0.0] - 2026-11-02
 
 正式首發開源版本。具備完整的跨平台支援、三語系文檔、自動化測試矩陣與官方品牌視覺資產。
