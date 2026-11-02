@@ -5,7 +5,7 @@ import { mkdtemp, mkdir, writeFile, rm, symlink, truncate, realpath } from 'node
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { discoverInstalledAgy, InstalledAgyError } from '../lib/installed-agy.js';
+import { discoverInstalledAgy, InstalledAgyError, resolveCustomInstallPath } from '../lib/installed-agy.js';
 import { diagnoseEnvironment } from '../lib/status.js';
 
 const cleanupFs = process.versions.electron === undefined
@@ -472,6 +472,71 @@ try {
     const overridden = diagnoseEnvironment({ env: { AGY_NEXT_INSTALL_PATH: 'C:\\Users\\somebody\\agy' }, platform: 'win32' });
     assert.ok(!/somebody/i.test(JSON.stringify(overridden)), 'override value leaked');
     assert.match(overridden.installPathOverride, /set/);
+  });
+
+  // ---- resolveCustomInstallPath smart path recovery ----
+  await test('resolveCustomInstallPath handles empty, relative, non-existent and empty paths', async () => {
+    // Empty / whitespace
+    assert.deepEqual(await resolveCustomInstallPath(''), { ok: true, cleared: true, root: null, kind: null, version: null });
+    assert.deepEqual(await resolveCustomInstallPath('   '), { ok: true, cleared: true, root: null, kind: null, version: null });
+    // Relative path
+    const rel = await resolveCustomInstallPath('relative/path');
+    assert.equal(rel.ok, false);
+    assert.equal(rel.error, 'INVALID_PATH');
+    // Non-existent path
+    const nonExist = await resolveCustomInstallPath(join(temporary, 'does-not-exist'));
+    assert.equal(nonExist.ok, false);
+    assert.equal(nonExist.error, 'PATH_NOT_FOUND');
+    // Exists but is an empty folder with no app
+    const emptyDir = join(temporary, `empty-${++serial}`);
+    await mkdir(emptyDir);
+    const emptyRes = await resolveCustomInstallPath(emptyDir);
+    assert.equal(emptyRes.ok, false);
+    assert.equal(emptyRes.error, 'INSTALL_NOT_FOUND');
+  });
+
+  await test('resolveCustomInstallPath recovers canonical root from desktop files and subfolders', async () => {
+    const d = await fixture();
+    // 1. Pointing directly to root folder
+    const r1 = await resolveCustomInstallPath(d.root);
+    assert.equal(r1.ok, true);
+    assert.equal(r1.kind, 'desktop');
+    assert.equal(r1.version, pkg.version);
+    assert.equal(r1.root, d.root);
+
+    // 2. Pointing to Antigravity.exe
+    const r2 = await resolveCustomInstallPath(d.executable);
+    assert.equal(r2.ok, true);
+    assert.equal(r2.kind, 'desktop');
+    assert.equal(r2.root, d.root);
+
+    // 3. Pointing to resources subdirectory
+    const r3 = await resolveCustomInstallPath(d.resources);
+    assert.equal(r3.ok, true);
+    assert.equal(r3.kind, 'desktop');
+    assert.equal(r3.root, d.root);
+  });
+
+  await test('resolveCustomInstallPath recovers canonical root from IDE files and subfolders', async () => {
+    const ide = await ideFixture();
+    // 1. Pointing directly to root folder
+    const r1 = await resolveCustomInstallPath(ide.root);
+    assert.equal(r1.ok, true);
+    assert.equal(r1.kind, 'ide');
+    assert.equal(r1.version, '1.107.0');
+    assert.equal(r1.root, ide.root);
+
+    // 2. Pointing to resources/app subdirectory
+    const r2 = await resolveCustomInstallPath(join(ide.app));
+    assert.equal(r2.ok, true);
+    assert.equal(r2.kind, 'ide');
+    assert.equal(r2.root, ide.root);
+
+    // 3. Pointing to main.js inside out
+    const r3 = await resolveCustomInstallPath(join(ide.app, 'out', 'main.js'));
+    assert.equal(r3.ok, true);
+    assert.equal(r3.kind, 'ide');
+    assert.equal(r3.root, ide.root);
   });
 
   console.log(`Passed ${passed} installed-Antigravity tests (synthetic fixtures only).`);
