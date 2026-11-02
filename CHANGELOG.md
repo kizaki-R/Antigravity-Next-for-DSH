@@ -6,62 +6,24 @@
 
 ## [1.1.0] - 2026-11-03
 
-### 新功能：自訂安裝路徑與智慧根目錄推導
-- **問題**：使用者若將 Antigravity 桌面版或 Antigravity IDE 安裝至自訂目錄（非預設系統路徑），外掛無法自動搜尋到；且以往需仰賴手動設定環境變數 `AGY_NEXT_INSTALL_PATH`，對一般使用者而言門檻過高且容易填錯路徑層級（例如誤填至子目錄 `resources` 或可執行檔 `Antigravity.exe`）。
-- **根因**：預設偵測僅掃描固定的標準安裝目錄，缺乏前端設定介面，且缺乏智慧路徑容錯機制。
-- **解決**：
-  - **設定頁新增自訂安裝路徑卡片**：使用者可直接在「本機 AGY 安裝」面板中貼上自訂路徑，並隨時一鍵「檢查」或「儲存」，亦可點擊「恢復自動偵測」清空設定。
-  - **智慧向上收斂（Smart Root Discovery）**：使用者無論貼上主資料夾、可執行檔（`Antigravity.exe` / `Antigravity IDE.exe`）、內部目錄（`resources`、`resources/app`、`out/main.js` 等），後端皆會自動向上追溯並鎖定正規根目錄。
-  - **Windows 開始功能表與捷徑穿透（LNK Shortcut Piercing）**：當使用者在 Windows 開始功能表對圖示點選「開啟檔案位置」並複製捷徑目錄或 `.lnk` 檔案路徑時，解析器會以純二進位 Buffer 解析該 Shell Link 指向的真實目標，自動跨層穿透至真實安裝目錄。
-  - **自動識別佈局與版本**：驗證時會自動探測是桌面版還是 IDE 版，直接在介面上回報識別結果（如 `已識別 Antigravity 桌面版（2.28.2）` 或 `已識別 Antigravity IDE（1.107.0）`），免除使用者手動選擇的困擾。
-  - **無縫持久化**：設定值自動儲存於憑證清冊中，重啟與背景檢查皆能持續生效。
+### Added
+- **支援官方 Antigravity IDE**：新增對 Antigravity IDE（VS Code 架構，無 `resources/app.asar`）的本機 OAuth 用戶端解析。未偵測到桌面版時，自動讀取 `resources/app/out/main.js` 的 `cloudCode/common/oauthClient` 模組，以相鄰賦值語法提取個人版用戶端憑證（與桌面版為同一組 Client ID）。兩組以上候選時強制 fail closed（`IDE_CLIENT_AMBIGUOUS`），不作順序猜測。
+- **自訂安裝路徑與智慧根目錄推導**：設定頁新增自訂安裝路徑輸入欄位，支援貼上主目錄、可執行檔（`Antigravity.exe` / `Antigravity IDE.exe`）或內部子目錄（`resources`、`resources/app`、`out/main.js`），後端自動向上收斂至正規安裝根目錄。
+- **Windows 開始功能表捷徑穿透（LNK Shortcut Piercing）**：支援貼上開始功能表捷徑目錄或 `.lnk` 檔案，後端以純二進位緩衝區解析 Windows Shell Link，自動導向真實執行檔所在目錄。
+- **佈局來源偏好與 auto 容錯降級（`clientSource`）**：新增 `clientSource` 設定（`auto` / `desktop` / `ide`，可透過 `cordis.yml` 或 `AGY_NEXT_CLIENT_SOURCE` 指定）。預設 `auto` 優先採用桌面版；若桌面版檔案損壞或無法讀取，自動降級切換至 IDE 版。
+- **環境診斷報告一鍵複製**：新增 `GET /agy-next/api/diagnostics` 端點與設定頁複製按鈕。報告包含作業系統、執行階段版本、候選目錄存在狀態（僅布林值，不含絕對路徑）與安裝判定代碼，零憑證與個資外洩。
+- **IDE 錯誤狀態碼細分**：新增 `IDE_CLIENT_UNREADABLE`、`IDE_IDENTITY_MISMATCH` 與 `IDE_CLIENT_AMBIGUOUS` 代碼與三語系說明文案。
 
-### 修正：安裝資訊標籤被擠成兩行
-- **問題**：中文語系的「應用程式版本」在安裝資訊區被斷成「應用程式版／本」兩行。
-- **根因**：`.agyn-kv` 的左欄是寫死的 `68px`（窄螢幕再降為 `60px`），六個中文字放不下。
-- **解決**：左欄改為 `max-content`，由最長的標籤決定寬度；標籤加 `white-space: nowrap`，窄螢幕只縮小欄距而不壓縮標籤。
+### Fixed
+- **安裝規格標籤斷行**：`.agyn-kv` 左欄改採 `max-content` 搭配 `white-space: nowrap`，修正繁體中文「應用程式版本」被擠壓成兩行的排版缺陷。
+- **頁尾版本號動態化**：頁尾改自 `/status` 端點讀取實際執行版本，修正硬編碼為 `npm v1.0.0` 導致的顯示漂移；新增 `bin/check-ui-versions.mjs` 靜態防護，阻止硬編碼版本字串再次進入介面模組。
+- **發布內容與 Git 歷史版本同步**：清除 `lib/ui.js` 中殘留的 `UI_BUILD = "u29"` 常數與 `.agyn-build` 樣式規則，確保 npm 發布產物與 Git 標籤一致。
 
-### 修正：頁尾版本號寫死
-- **問題**：設定頁頁尾固定顯示 `npm v1.0.0`，即使安裝的是更新版本。
-- **根因**：`lib/ui.js` 把版本寫成字面量。瀏覽器端讀不到 `package.json`，但 `/status` 早已回傳 `version`，只是沒有被使用。
-- **解決**：頁尾改讀 `status.version`（由主機端讀取 `package.json` 填入）。新增 `bin/check-ui-versions.mjs` 並納入 `npm run check`，偵測到寫死的版本字面量即失敗，防止再次漂移。
-
-### 新功能：支援 Antigravity IDE
-- **問題**：只安裝官方 **Antigravity IDE** 的使用者，設定頁一律顯示「🔴 未找到」。IDE 是 VS Code 分支，沒有 `resources/app.asar`，而既有的偵測只認桌面版的 ASAR 佈局，因此連候選路徑都沒有涵蓋，使用者無法判斷是「沒裝」還是「不支援」。
-- **根因**：`candidates()` 只列出桌面版路徑（`Programs\antigravity`、`ProgramFiles\Antigravity`）。IDE 版安裝在 `Programs\Antigravity IDE`，且把 OAuth client 以相鄰字串常數內嵌在 `resources/app/out/main.js` 的 `cloudCode/common/oauthClient` 模組中，而非 ASAR 內的 JSON。
-- **解決**：
-  - **新增 IDE 偵測分支**：找不到桌面版時，改走 `ideClient()`。先讀 `resources/app/package.json` 驗證 `name === "Antigravity IDE"`，再定位 `cloudCode/common/oauthClient` 模組，只讀取該錨點周邊的有限視窗（`IDE_MODULE_WINDOW`），不載入整份 14 MB 以上的 bundle。
-  - **安全配對**：client id 與 secret 必須以賦值語法相鄰（`IDE_PAIR_GAP`），不會跨語句湊對。模組內出現超過兩組不同 client 時 fail closed（`IDE_CLIENT_AMBIGUOUS`），不做猜測。
-  - **桌面版優先**：兩種佈局並存時一律採用桌面版。其 ASAR schema 長期穩定，IDE 的 bundle 則可能隨任一版本重構。
-  - **回傳值新增 `kind`**：`"desktop"` 或 `"ide"`，設定頁可標示用戶端來源。
-- **驗證**：以本機實際安裝的 IDE（1.107.0）取出 client，並於 Google 同意畫面確認該 client 被接受且 redirect URI 有效。經比對，IDE 提供的 client 與桌面版為同一個，兩者等價。
-- **未支援**：IDE 的登入狀態（token）。那屬於使用者本人的授權憑證而非應用程式身分，外掛維持只讀取應用程式內建的 client，登入一律走 Google 同意畫面。
-
-### 新功能：環境診斷報告
-- **問題**：使用者回報「偵測不到」時，維護者拿不到 OS、版本、候選路徑是否存在等基本事實，只能反覆來回詢問。
-- **解決**：新增 `GET /agy-next/api/diagnostics` 與設定頁的「複製診斷報告」按鈕。報告包含作業系統、Node／Electron 版本、`AGY_NEXT_INSTALL_PATH` 是否設定（值不輸出）、各候選路徑**是否存在**（只給標籤與布林值，不給完整路徑），以及目前的安裝判定代碼。
-- **隱私邊界**：報告不含帳號、token、client 值或任何個人絕對路徑，並有自動檢查確保此性質。
-
-### 新功能：`clientSource` 來源偏好與 auto 容錯
-- **設定**：新增 `clientSource` 欄位（`auto` / `desktop` / `ide`），可用 `cordis.yml` 或環境變數 `AGY_NEXT_CLIENT_SOURCE` 指定。預設 `auto`。
-- **`auto` 具容錯**：桌面版存在但用戶端讀不出來時，會自動改試 IDE，而不是直接報錯讓使用者卡住。這是本次改動對實際使用者最有價值的一項：桌面版損壞不再等於完全不能用。
-- **`desktop` / `ide` 為除錯用途**：釘選單一佈局，該佈局不在就明確失敗，不會靜默改用另一個。適合需要確認「到底是哪一個在提供 client」的場合。
-- 介面會標示實際來源（`已就緒 · 桌面版` 或 `已就緒 · IDE`），搭配 `auto` 容錯時使用者能看出最後用了哪一個。
-
-### 改進：IDE 失敗的錯誤訊息
-- 新增 `IDE_CLIENT_UNREADABLE`、`IDE_IDENTITY_MISMATCH`、`IDE_CLIENT_AMBIGUOUS` 三個代碼，三語系皆有對應文案。使用者裝了 IDE 但讀不到時，訊息會明說「偵測到 Antigravity IDE，但無法讀取其用戶端設定」，而不是含糊的「未找到」。
-
-### 修正：v1.0.1 的 npm 套件與 repository 不一致
-- **問題**：從 npm 安裝 1.0.1 的使用者，設定頁標題旁仍會看到灰色 `u29` 建置標記；但 GitHub 上的 `a0e7165` 已移除該標記。
-- **根因**：`npm publish` 發布的是當下工作目錄，不是 git ref。1.0.1 於 `2026-11-02 04:55` 發布，而移除標記的 commit `fa724a9` 直到同日 `14:01` 才進入歷史。CHANGELOG 描述的是 repository 狀態，tarball 卻早於它。
-- **解決**：新增 `bin/publish-guard.mjs`，掛進 `prepublishOnly`。發布前若工作區有未提交的已追蹤檔案變更、HEAD 領先遠端，或 HEAD 的 tag 與 `package.json` 版本不符，直接阻擋並給出對應的下一步指令。
-- **技術債清理**：移除 `lib/ui.js` 中已無渲染用途的 `UI_BUILD` 常數與 `.agyn-build` CSS。
-
-### 維護性
-- **npm 中繼資料修正**：移除 `package.json` 中錯誤的 `repository.directory` 欄位。公開倉庫的根目錄即為外掛本體，原值會讓 npm 的 Repository 連結指向不存在的 `agy-next/` 子目錄。
-- **發布防護**：`prepublishOnly` 依序執行 `publish-guard` → `npm run check` → `npm test`。
-- **公開邊界掃描**：CI 新增獨立 `safety` job，檢查本機 Windows 使用者路徑、私有工作區 junction 名稱、對話備份路徑、Gmail 位址、疑似 Google OAuth client secret 與私鑰區塊。
-- **主機契約可驗證化**：新增 `bin/verify-peers.mjs` 與 `verify:peers` 腳本。原本 `npm run verify` 在一般 checkout 會直接以 exit 2 中止，使 `check-offline.mjs` 的主機契約斷言從未真正執行；現在可透過 `AGY_PEER_ROOT` 指向 peer 套件後完整跑完。
+### Maintenance & Security
+- **發布安全前置檢查（`publish-guard`）**：`prepublishOnly` 掛載 `bin/publish-guard.mjs`。發布前自動驗證工作區無未提交變更、本地分支無領先遠端未推送的 Commit，且 HEAD 標籤與 `package.json` 版本完全相符。
+- **公開程式碼邊界自動掃描**：CI 新增獨立 `safety` 作業，全面掃描已追蹤檔案，防範 Windows 使用者路徑、私有 Junction 名稱、對話備份路徑、Gmail 地址與私鑰區塊外流。
+- **npm 套件中繼資料校正**：移除 `package.json` 中多餘的 `repository.directory` 欄位，確保 npm 頁面的原始碼倉庫連結正確指向公開倉庫根目錄。
+- **宿主契約測試本地驗證**：新增 `bin/verify-peers.mjs` 與 `npm run verify:peers` 腳本，透過 `AGY_PEER_ROOT` 於本地環境完整執行主機契約斷言。模組語法檢查擴充至 43 個模組。
 
 ---
 
