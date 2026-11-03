@@ -1,7 +1,5 @@
 # 變更紀錄 (CHANGELOG)
 
-本專案遵循 [Semantic Versioning (語意化版本)](https://semver.org/lang/zh-TW/) 規範。
-
 [English](CHANGELOG.md) | 繁體中文
 
 ---
