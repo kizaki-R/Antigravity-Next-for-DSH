@@ -19,56 +19,61 @@
 
 ## 功能特點
 
-- **免手動配置 GCP**：直接從本機安裝的官方 Antigravity 解析 OAuth client，不需要在 Google Cloud Console 建立專案或金鑰。
+- **免手動配置 GCP**：直接從本機安裝的官方 Antigravity 桌面程式或 Antigravity IDE 解析 OAuth client，無需於 Google Cloud Console 建立專案或金鑰。
+- **雙架構與 IDE 支援**：同時支援官方桌面版（Electron ASAR）與 Antigravity IDE（VS Code 分支），具備自動降級容錯與獨立設定能力。
+- **智慧路徑與捷徑穿透**：設定頁支援貼上任意安裝目錄、執行檔（`Antigravity.exe` / `Antigravity IDE.exe`）、內部目錄（`resources/app`）或 Windows 開始功能表 `.lnk` 捷徑，系統自動向上收斂鎖定正規安裝根目錄。
 - **多帳號輪替池**：可加入多組 Google 帳號並設定安全閾值；當前帳號額度用盡時，自動切換至備用帳號接續對話。
 - **即時額度監控面板**：在設定頁顯示 Gemini、Claude 與 Gemini 4 Argon 的每週及 5 小時額度條與重設倒數。
 - **思考強度檔位調節**：支援推理思考強度（Low、Medium、High，適用於 Gemini 4 Argon、Gemini 3.8 Flash 與 Claude 系列）。
-- **本機安全儲存**：客戶端探索僅讀取檔案，不會執行官方 App。Token 僅存於本機 `<DSH_HOME>/storages/agy-next-oauth.json`，不上傳任何金鑰。
+- **本機安全儲存**：客戶端探索僅讀取檔案，不執行官方 App。Token 僅存於本機 `<DSH_HOME>/storages/agy-next-oauth.json`，不上傳任何金鑰。
 
 ---
 
 ## 系統需求
 
 1. **DeepSeek Harness**：版本 `0.1.5` ～ `0.2.x`（完整相容至最新 `0.2.1` 系列），Node.js `>=20`。
-2. **官方 Antigravity 桌面程式**：已安裝於 Windows 或 macOS（Linux 支援進行中）。可至[官方網站](https://antigravity.google/product/antigravity-2)下載（*使用外掛時該程式不需保持啟動*）。
+2. **官方 Antigravity 安裝**：本機已安裝官方桌面應用程式或 Antigravity IDE（支援 Windows、macOS，Linux 支援進行中；*使用外掛時該程式不需保持啟動*）。
 3. **Google 帳號**：可正常完成瀏覽器 OAuth 授權，並擁有 Gemini / Cloud Code Assist 存取權限。
 
 ---
 
 ## 安裝指南
 
-### 方式一：DSH 介面安裝（推薦）
+### 方式一：DSH 插件市場安裝（推薦）
 
-1. 開啟 DSH 側邊欄的 **「插件」→「+ 添加插件」**。
-2. 在輸入框貼上 GitHub 倉庫網址：
-   ```text
-   https://github.com/kizaki-R/Antigravity-Next-for-DSH
-   ```
-   *（待 npm 發布後，亦可直接輸入 `agy-next`）。*
+1. 開啟 DSH 側邊欄的 **「插件」→「插件市場」**。
+2. 搜尋 `agy-next` 或 `antigravity`。
 3. 點選 **「安裝」**，完成後重新啟動 DSH。
 
-### 方式二：本機開發模式（CLI / Link）
+### 方式二：終端機命令列安裝
+
+在 DSH 桌面 profile 目錄下直接安裝：
+
+```bash
+cd ~/.dsh/profiles/desktop
+npm install agy-next@latest
+```
+
+### 方式三：本機開發模式（CLI / Link）
 
 從本地原始碼進行開發測試：
 
 ```bash
-# 於 DSH profile 註冊本機連結
 dsh plugin --profile <profile> add link:/absolute/path/to/agy-next
 ```
-
-確認該 profile 的 `dsh.profile.bundles` 已包含 `agy-next`，隨後重新啟動 DSH。
 
 ---
 
 ## 快速上手
 
-### 1. 登入帳號
+### 1. 帳號設定
 
 在 DSH 中開啟 **「設定」→「AGY-Next」**：
 
-1. **檢查狀態**：確認頁面偵測到本機 Antigravity 安裝路徑。
-2. **新增帳號**：點選 **「登入 / 新增帳號」**，瀏覽器會開啟 Google 官方授權頁面。
-3. 授權後帳號即進入帳號池，並顯示各模型額度狀態。
+1. **檢查狀態**：確認頁面偵測到本機 Antigravity 桌面版或 IDE。
+2. **自訂路徑（可選）**：若安裝於自訂目錄，在「自訂安裝路徑」欄位貼上資料夾、可執行檔或開始功能表捷徑，點擊 **「檢查」** ➔ **「儲存」**。
+3. **新增帳號**：點選 **「登入 / 新增帳號」**，瀏覽器會開啟 Google 官方授權頁面。
+4. 授權後帳號即進入帳號池，並顯示各模型即時額度進度條。
 
 *CLI 備用指令：*
 
@@ -79,30 +84,22 @@ npm run login -- --force   # 強制重新授權
 npm run login -- --logout  # 清除已存憑證
 ```
 
-### 2. 自訂安裝路徑
-
-若 Antigravity 安裝在非標準路徑，在啟動 DSH 前設定環境變數即可：
-
-```powershell
-# PowerShell
-$env:AGY_NEXT_INSTALL_PATH = 'C:\Custom\Path\To\Antigravity'
-```
-
 ---
 
 ## 進階設定
 
-若需調整連線參數，可在 profile 的 `cordis.yml` 中覆寫：
+可於 profile 的 `cordis.yml` 中微調參數：
 
 ```yaml
 - id: agy-next
   name: agy-next
   config:
-    credentialPath: ""               # 預設為 <DSH_HOME>/storages/agy-next-oauth.json
-    streamIdleTimeoutMs: 300000      # 串流閒置超時保護（毫秒，預設 5 分鐘）
-    discoveryTimeoutMs: 8000         # 本機 client 探索超時（毫秒）
-    projectCacheTtlMs: 1800000       # 專案 metadata 快取存活時間（毫秒，30 分鐘）
-    runtimeModel: ""                 # 選填：固定指定後端模型 ID
+    clientSource: "auto"             # "auto" (預設，桌面版優先且支援 IDE 容錯降級)、"desktop" 或 "ide"
+    credentialPath: ""               # 預設：<DSH_HOME>/storages/agy-next-oauth.json
+    streamIdleTimeoutMs: 300000      # 串流閒置超時防護（毫秒，預設 5 分鐘）
+    discoveryTimeoutMs: 8000         # 本機客戶端探測超時（毫秒）
+    projectCacheTtlMs: 1800000       # 專案中繼資料快取 TTL（毫秒，30 分鐘）
+    runtimeModel: ""                 # 可選：強制指定特定後端模型 ID
 ```
 
 ---
@@ -123,9 +120,10 @@ $env:AGY_NEXT_INSTALL_PATH = 'C:\Custom\Path\To\Antigravity'
 於 `agy-next/` 目錄下執行離線測試：
 
 ```bash
-npm run check        # 檢查全數 40 支模組語法
-npm test             # 執行離線回歸測試（21 項 fixture 隔離驗證）
-npm run test:peers   # 嚴格主機 peers 契約測試（需設定 AGY_PEER_ROOT）
+npm run check          # 檢查全數 43 支模組語法
+npm test               # 執行離線回歸測試（36 項 fixture 隔離驗證）
+npm run test:peers     # 嚴格主機 peers 契約測試（需設定 AGY_PEER_ROOT）
+npm run verify:peers   # 對真實 peers 驗證主機契約
 ```
 
 執行 peers 契約測試時，指定主機依賴路徑：

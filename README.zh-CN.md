@@ -19,7 +19,9 @@
 
 ## 功能特性
 
-- **免手动配置 GCP**：直接从本机安装的官方 Antigravity 解析 OAuth client，无需在 Google Cloud Console 创建项目或密钥。
+- **免手动配置 GCP**：直接从本机安装的官方 Antigravity 桌面端或 Antigravity IDE 解析 OAuth client，无需在 Google Cloud Console 创建项目或密钥。
+- **双架构与 IDE 支持**：同时支持官方桌面端（Electron ASAR）与 Antigravity IDE（VS Code 分支），具备自动降级容错与独立配置能力。
+- **智能路径与快捷方式穿透**：设置页支持粘贴任意安装目录、可执行文件（`Antigravity.exe` / `Antigravity IDE.exe`）、内部目录（`resources/app`）或 Windows 开始菜单 `.lnk` 快捷方式，系统自动向上收敛锁定正规安装根目录。
 - **多账号轮换池**：可添加多个 Google 账号并配置安全阈值；当前账号额度耗尽时，自动切换至备用账号继续对话。
 - **实时额度监控面板**：设置页展示 Gemini、Claude 与 Gemini 4 Argon 的每周及 5 小时额度条与重置倒计时。
 - **思考强度档位调节**：支持推理思考强度调节（Low、Medium、High，适用于 Gemini 4 Argon、Gemini 3.8 Flash 与 Claude 系列）。
@@ -30,45 +32,48 @@
 ## 环境要求
 
 1. **DeepSeek Harness**：版本 `0.1.5` ～ `0.2.x`（完整兼容至最新 `0.2.1` 系列），Node.js 运行时 `>=20`。
-2. **官方 Antigravity 桌面端**：已安装在 Windows 或 macOS 系统（Linux 适配进行中）。请从[官方渠道](https://antigravity.google/product/antigravity-2)下载（*使用插件时无需保持该应用开启*）。
+2. **官方 Antigravity 安装**：本机已安装官方桌面应用或 Antigravity IDE（支持 Windows、macOS，Linux 适配进行中；*使用插件时无需保持该应用开启*）。
 3. **Google 账号：** 支持浏览器 OAuth 授权且具备访问 Gemini / Cloud Code Assist 服务的权限。
 
 ---
 
 ## 安装说明
 
-### 方式一：DSH 界面安装（推荐）
+### 方式一：DSH 插件市场安装（推荐）
 
-1. 打开 DSH 侧边栏的 **“插件” → “+ 添加插件”**。
-2. 在输入框输入 GitHub 仓库地址：
-   ```text
-   https://github.com/kizaki-R/Antigravity-Next-for-DSH
-   ```
-   *（npm 发布后，亦可直接输入包名 `agy-next`）。*
+1. 打开 DSH 侧边栏的 **“插件” → “插件市场”**。
+2. 搜索 `agy-next` 或 `antigravity`。
 3. 点击 **“安装”**，完成后重启 DSH。
 
-### 方式二：本地开发模式（CLI / Link）
+### 方式二：终端命令行安装
+
+在 DSH 桌面 profile 目录下直接安装：
+
+```bash
+cd ~/.dsh/profiles/desktop
+npm install agy-next@latest
+```
+
+### 方式三：本地开发模式（CLI / Link）
 
 从本地源码调试：
 
 ```bash
-# 在 DSH profile 中注册本地链接
 dsh plugin --profile <profile> add link:/absolute/path/to/agy-next
 ```
-
-确保该 profile 的 `dsh.profile.bundles` 中包含 `agy-next`，随后重启 DSH。
 
 ---
 
 ## 快速使用
 
-### 1. 登录账号
+### 1. 账号配置
 
 在 DSH 中进入 **“设置” → “AGY-Next”**：
 
-1. **检查状态**：确认页面识别到本地 Antigravity 安装路径。
-2. **添加账号**：点击 **“登录 / 添加账号”**，系统将调用浏览器打开 Google 官方授权页。
-3. 授权成功后账号即进入账号池，并实时展示各模型额度。
+1. **检查状态**：确认页面识别到本地 Antigravity 桌面端或 IDE。
+2. **自定义路径（可选）**：若安装在非标准目录，在“自定义安装路径”输入框粘贴文件夹、可执行文件或开始菜单快捷方式，点击 **“检查”** ➔ **“保存”**。
+3. **添加账号**：点击 **“登录 / 添加账号”**，系统将调用浏览器打开 Google 官方授权页。
+4. 授权成功后账号即进入账号池，并实时展示各模型额度。
 
 *CLI 备用命令：*
 
@@ -77,15 +82,6 @@ npm run login              # 登录新账号
 npm run login -- --status  # 查看当前活动账号与额度
 npm run login -- --force   # 强制重新认证
 npm run login -- --logout  # 清除已保存凭据
-```
-
-### 2. 自定义安装路径
-
-若 Antigravity 安装在非标准目录，在启动 DSH 前配置环境变量即可：
-
-```powershell
-# PowerShell
-$env:AGY_NEXT_INSTALL_PATH = 'C:\Custom\Path\To\Antigravity'
 ```
 
 ---
@@ -98,9 +94,10 @@ $env:AGY_NEXT_INSTALL_PATH = 'C:\Custom\Path\To\Antigravity'
 - id: agy-next
   name: agy-next
   config:
+    clientSource: "auto"             # "auto" (默认，桌面端优先且支持 IDE 容错降级)、"desktop" 或 "ide"
     credentialPath: ""               # 默认为 <DSH_HOME>/storages/agy-next-oauth.json
     streamIdleTimeoutMs: 300000      # 5 分钟空闲流保护超时
-    discoveryTimeoutMs: 8000         # 本地二进制客户端探测超时
+    discoveryTimeoutMs: 8000         # 本地客户端探测超时
     projectCacheTtlMs: 1800000       # 项目元数据缓存生存期（30 分钟）
     runtimeModel: ""                 # 可选：固定指定后端模型 ID
 ```
@@ -123,9 +120,10 @@ $env:AGY_NEXT_INSTALL_PATH = 'C:\Custom\Path\To\Antigravity'
 在 `agy-next/` 目录下运行完整离线测试集：
 
 ```bash
-npm run check        # 检查全量 40 个源码模块的语法
-npm test             # 离线回归测试集（21 个用例）
-npm run test:peers   # 严格主控 peers 契约测试（不允许跳过）
+npm run check          # 检查全量 43 个源码模块的语法
+npm test               # 离线回归测试集（36 个用例）
+npm run test:peers     # 严格主控 peers 契约测试（不允许跳过）
+npm run verify:peers   # 对真实 peers 验证宿主契约
 ```
 
 进行 peers 契约测试前配置主控依赖路径：
