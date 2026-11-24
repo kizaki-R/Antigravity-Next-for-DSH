@@ -4,6 +4,15 @@
 
 ---
 
+## [Unreleased]
+
+### 變更
+- 已註冊的 provider 改走官方 Antigravity ACP server（先 `agy acp`，否則 `agy_acp_server`），不再走 Cloud Code Assist 請求路徑。provider id 仍是 `agy-next`。
+- 設定頁登入改呼叫 ACP `authenticate`，使用 server 自己廣告的 `oauth-personal`。Token 留在 Antigravity 自己的儲存，此外掛不讀取。一般對話與模型清單不會再呼叫 `authenticate`。
+- 模型清單來自 ACP `session/new`。工具回合尚未接通；ACP 原生權限要求一律拒絕。
+
+Cloud Code adapter 類別仍留在樹裡，供既有離線測試使用，但已不再註冊。
+
 ## [1.1.0] - 2026-11-03
 
 ### 新增功能 (Added)

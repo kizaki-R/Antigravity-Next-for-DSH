@@ -4,6 +4,15 @@ English | [繁體中文](CHANGELOG.zh-TW.md)
 
 ---
 
+## [Unreleased]
+
+### Changed
+- The registered provider now talks to the official Antigravity ACP server (`agy acp`, else `agy_acp_server`) instead of the Cloud Code Assist request path. Provider id stays `agy-next`.
+- Settings sign-in calls ACP `authenticate` with the server-advertised `oauth-personal` method. Tokens stay in Antigravity's own store and are not read by this plugin. Chat and model listing do not call `authenticate` again.
+- The model list comes from ACP `session/new`. Tool rounds are not bridged yet; native ACP permission requests are cancelled.
+
+The Cloud Code adapter class remains in the tree for the existing offline tests. It is no longer registered.
+
 ## [1.1.0] - 2026-11-03
 
 ### Added

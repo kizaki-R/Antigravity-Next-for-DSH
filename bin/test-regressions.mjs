@@ -4,7 +4,7 @@
  * Runs entirely offline with in-memory stores and a stubbed fetch.
  */
 import assert from "node:assert/strict";
-import { mkdtemp, realpath, rm } from "node:fs/promises";
+import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CredentialStore } from "../lib/store.js";
@@ -16,6 +16,7 @@ import {
 } from "../lib/dynamic-models.js";
 import { MODELS, ROUTING, clientConfigured, clientId, clientSecret } from "../lib/constants.js";
 import { clearAllExhaustion, isFamilyExhausted, markFamilyExhausted, quotaFamilyAtThreshold, recoverExhaustedFamilies } from "../lib/model-family.js";
+import { isHardQuota } from "../lib/client.js";
 
 const results = [];
 
@@ -167,6 +168,47 @@ await test("captured credential writes preserve account IDs and never retarget a
   }
 });
 
+await test("signing out one account is not undone by the legacy credential file", async () => {
+  const root = await mkdtemp(join(tmpdir(), "agy-logout-dismiss-"));
+  const store = new CredentialStore(join(root, "agy-next-oauth.json"), {
+    legacyPath: join(root, "antigravity-oauth.json"),
+  });
+  try {
+    await writeFile(join(root, "antigravity-oauth.json"), JSON.stringify({
+      version: 2,
+      activeId: "a",
+      accounts: [
+        { id: "a", email: "gone@example.invalid", access: "legacy-a", refresh: "legacy-refresh-a" },
+        { id: "b", email: "stay@example.invalid", access: "legacy-b", refresh: "legacy-refresh-b" },
+        { id: "c", email: "new@example.invalid", access: "legacy-c", refresh: "legacy-refresh-c" },
+      ],
+    }));
+    await store.writeBook({
+      version: 2, activeId: "b", autoSwitch: { enabled: false }, visibleModels: null,
+      accounts: [
+        { id: "a", email: "gone@example.invalid", access: "a", refresh: "refresh-a" },
+        { id: "b", email: "stay@example.invalid", access: "b", refresh: "refresh-b" },
+      ],
+    });
+    assert.equal(await store.removeAccount("a"), true);
+    assert.equal(await store.syncLegacyAccounts(), 1, "an email the user never signed out may still be imported");
+    let book = await store.readBook();
+    assert.equal(book.accounts.some((account) => account.email === "gone@example.invalid"), false, "explicit sign-out must survive the next legacy sync");
+    assert.equal(book.accounts.some((account) => account.email === "stay@example.invalid"), true);
+    assert.equal(book.accounts.some((account) => account.email === "new@example.invalid"), true);
+    assert.equal(book.activeId, "b", "signing out a standby account must not change the account in use");
+    await store.addAccount({ email: "Gone@example.invalid", access: "back", refresh: "refresh-back" });
+    assert.equal(await store.syncLegacyAccounts(), 0, "signing in again must not import a second copy");
+    book = await store.readBook();
+    assert.equal(book.accounts.filter((account) => account.email.toLowerCase() === "gone@example.invalid").length, 1);
+    assert.equal(book.dismissedEmails, undefined);
+  } finally {
+    const resolved = await realpath(root);
+    assert.ok(resolved.startsWith(await tempRootPrefix("agy-logout-dismiss-")));
+    await rm(resolved, { recursive: true, force: true });
+  }
+});
+
 await test("concurrent account additions lose nothing", async () => {
   const store = new CredentialStore();
   let book;
@@ -260,6 +302,168 @@ await test("unknown discovery keeps the user's checked models visible", async ()
 });
 
 /* ------------------------------------------------------------- quota locks */
+
+await test("quota 429s are hard limits even without the exact Individual phrase", async () => {
+  assert.equal(isHardQuota(429, "Individual quota reached"), true);
+  assert.equal(isHardQuota(429, "You exceeded your current quota, please retry later"), true);
+  assert.equal(isHardQuota(429, "Rate limit exceeded, please retry"), false);
+  assert.equal(isHardQuota(403, "quota"), false);
+});
+
+await test("a quota 429 that is not the exact Individual phrase still switches accounts", async () => {
+  const { AntigravityAdapter } = await import("../lib/index.js");
+  const oldFetch = globalThis.fetch;
+  const tokens = { a: "test-account-a-phrase", b: "test-account-b-phrase" };
+  let book = {
+    version: 2, activeId: "a", autoSwitch: { enabled: true, thresholdPct: 80 }, visibleModels: null,
+    accounts: [
+      { id: "a", email: "a@example.invalid", access: tokens.a, refresh: "r-a", expires: Date.now() + 3_600_000, projectId: "p" },
+      { id: "b", email: "b@example.invalid", access: tokens.b, refresh: "r-b", expires: Date.now() + 3_600_000, projectId: "p" },
+    ],
+  };
+  const generatedWith = [];
+  const store = {
+    readBook: async () => book,
+    readOrImport: async () => book.accounts.find((account) => account.id === book.activeId),
+    modifyBook: async (fn) => { const next = await fn(book); if (next !== undefined) book = next; return book; },
+    writeBook: async (next) => { book = next; },
+  };
+  try {
+    globalThis.fetch = async (url, init = {}) => {
+      const target = String(url);
+      const auth = String(init.headers?.Authorization ?? "");
+      const owner = auth.includes(tokens.a) ? "a" : auth.includes(tokens.b) ? "b" : "?";
+      if (target.includes("fetchAvailableModels")) return Response.json({ models: { "gemini-4-argon-medium": { maxTokens: 1_000_000, maxOutputTokens: 65536 } } });
+      if (target.includes("retrieveUserQuotaSummary")) {
+        return Response.json({ groups: [{ buckets: [{ bucketId: "gemini-argon-wtu-weekly", remainingFraction: 1 }] }] });
+      }
+      if (target.includes("streamGenerateContent")) {
+        generatedWith.push(owner);
+        if (owner === "a") return Response.json({ error: { message: "You exceeded your current quota" } }, { status: 429 });
+        return new Response('data: {"response":{"candidates":[{"content":{"parts":[{"text":"OK"}]}}]}}\n\n', { status: 200, headers: { "content-type": "text/event-stream" } });
+      }
+      return new Response("unexpected request", { status: 500 });
+    };
+    invalidateUpstreamModels(tokens.a);
+    invalidateUpstreamModels(tokens.b);
+    const adapter = new AntigravityAdapter(store);
+    let text = "";
+    for await (const chunk of adapter.stream({ provider: "agy-next", model: "gemini-4-argon", messages: [{ role: "user", content: "hi" }], maxTokens: 64 })) {
+      if (chunk.type === "text-delta") text += chunk.text ?? "";
+    }
+    assert.equal(text, "OK");
+    assert.deepEqual(generatedWith, ["a", "b"], "quota wording other than the exact phrase still moves the request");
+    assert.equal(book.activeId, "b");
+  } finally {
+    globalThis.fetch = oldFetch;
+    invalidateUpstreamModels(tokens.a);
+    invalidateUpstreamModels(tokens.b);
+  }
+});
+
+await test("a rate-limit 429 does not lock the family or switch accounts", async () => {
+  const { AntigravityAdapter } = await import("../lib/index.js");
+  const oldFetch = globalThis.fetch;
+  const tokens = { a: "test-account-a-rate", b: "test-account-b-rate" };
+  let book = {
+    version: 2, activeId: "a", autoSwitch: { enabled: true, thresholdPct: 80 }, visibleModels: null,
+    accounts: [
+      { id: "a", email: "a@example.invalid", access: tokens.a, refresh: "r-a", expires: Date.now() + 3_600_000, projectId: "p" },
+      { id: "b", email: "b@example.invalid", access: tokens.b, refresh: "r-b", expires: Date.now() + 3_600_000, projectId: "p" },
+    ],
+  };
+  const store = {
+    readBook: async () => book,
+    readOrImport: async () => book.accounts.find((account) => account.id === book.activeId),
+    modifyBook: async (fn) => { const next = await fn(book); if (next !== undefined) book = next; return book; },
+    writeBook: async (next) => { book = next; },
+  };
+  try {
+    globalThis.fetch = async (url, init = {}) => {
+      const target = String(url);
+      if (target.includes("fetchAvailableModels")) return Response.json({ models: { "gemini-4-argon-medium": { maxTokens: 1_000_000, maxOutputTokens: 65536 } } });
+      if (target.includes("retrieveUserQuotaSummary")) {
+        return Response.json({ groups: [{ buckets: [{ bucketId: "gemini-argon-wtu-weekly", remainingFraction: 1 }] }] });
+      }
+      if (target.includes("streamGenerateContent")) {
+        return Response.json({ error: { message: "Rate limit exceeded, please retry" } }, { status: 429 });
+      }
+      return new Response("unexpected request", { status: 500 });
+    };
+    invalidateUpstreamModels(tokens.a);
+    invalidateUpstreamModels(tokens.b);
+    const adapter = new AntigravityAdapter(store);
+    await assert.rejects(async () => {
+      for await (const _chunk of adapter.stream({ provider: "agy-next", model: "gemini-4-argon", messages: [{ role: "user", content: "hi" }], maxTokens: 64 })) {}
+    });
+    assert.equal(book.activeId, "a");
+    assert.equal(book.accounts[0].exhaustedFamilies, undefined);
+  } finally {
+    globalThis.fetch = oldFetch;
+    invalidateUpstreamModels(tokens.a);
+    invalidateUpstreamModels(tokens.b);
+  }
+});
+
+await test("a 401 on a locally unexpired token refreshes once and retries", async () => {
+  const { AntigravityAdapter } = await import("../lib/index.js");
+  const oldFetch = globalThis.fetch;
+  const tokens = { stale: "test-account-stale-access", fresh: "test-account-fresh-access" };
+  let book = {
+    version: 2, activeId: "a", autoSwitch: { enabled: false }, visibleModels: null,
+    accounts: [
+      { id: "a", email: "a@example.invalid", access: tokens.stale, refresh: "r-a", expires: Date.now() + 3_600_000, projectId: "p" },
+    ],
+  };
+  let refreshes = 0;
+  const generatedWith = [];
+  const store = {
+    readBook: async () => book,
+    readOrImport: async () => book.accounts.find((account) => account.id === book.activeId),
+    modifyAccount: async (id, fn) => {
+      const account = book.accounts.find((item) => item.id === id);
+      if (!account) return false;
+      await fn(account);
+      return true;
+    },
+    modifyBook: async (fn) => { const next = await fn(book); if (next !== undefined) book = next; return book; },
+  };
+  try {
+    globalThis.fetch = async (url, init = {}) => {
+      const target = String(url);
+      const auth = String(init.headers?.Authorization ?? "");
+      if (target.includes("fetchAvailableModels")) return Response.json({ models: { "gemini-4-argon-medium": { maxTokens: 1_000_000, maxOutputTokens: 65536 } } });
+      if (target.includes("retrieveUserQuotaSummary")) return Response.json({ groups: [] });
+      if (target.includes("streamGenerateContent")) {
+        generatedWith.push(auth.includes(tokens.fresh) ? "fresh" : "stale");
+        if (auth.includes(tokens.stale)) return Response.json({ error: { message: "invalid credentials" } }, { status: 401 });
+        return new Response('data: {"response":{"candidates":[{"content":{"parts":[{"text":"OK"}]}}]}}\n\n', { status: 200, headers: { "content-type": "text/event-stream" } });
+      }
+      return new Response("unexpected request", { status: 500 });
+    };
+    invalidateUpstreamModels(tokens.stale);
+    invalidateUpstreamModels(tokens.fresh);
+    const adapter = new AntigravityAdapter(store, undefined, {
+      resolveOAuthClient: async () => ({ clientId: "test-client", clientSecret: "test-secret" }),
+      refreshAccessToken: async () => {
+        refreshes += 1;
+        return { access_token: tokens.fresh, expires_in: 3600, refresh_token: "r-a" };
+      },
+    });
+    let text = "";
+    for await (const chunk of adapter.stream({ provider: "agy-next", model: "gemini-4-argon", messages: [{ role: "user", content: "hi" }], maxTokens: 64 })) {
+      if (chunk.type === "text-delta") text += chunk.text ?? "";
+    }
+    assert.equal(text, "OK");
+    assert.equal(refreshes, 1);
+    assert.deepEqual(generatedWith, ["stale", "fresh"]);
+    assert.equal(book.accounts[0].access, tokens.fresh);
+  } finally {
+    globalThis.fetch = oldFetch;
+    invalidateUpstreamModels(tokens.stale);
+    invalidateUpstreamModels(tokens.fresh);
+  }
+});
 
 await test("auto-switch treats missing quota as unknown, not available", async () => {
   assert.equal(quotaFamilyAtThreshold(undefined, "argon"), null);
