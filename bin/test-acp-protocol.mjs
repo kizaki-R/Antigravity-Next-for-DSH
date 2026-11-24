@@ -22,20 +22,36 @@ assert.equal(redact('Authorization: Bearer secret-value'), 'Authorization: Beare
 
 const discovered = modelsFromSession({
   sessionId: "s",
-  configOptions: [{
-    type: "select",
-    id: "model",
-    category: "model",
-    currentValue: "gemini-4-neon",
-    options: [
-      { value: "gemini-4-neon", name: "Gemini 4 Neon" },
-      { value: "gemini-4-argon", name: "Gemini 4 Argon" },
-    ],
-  }],
+  configOptions: [
+    {
+      type: "select",
+      id: "model",
+      category: "model",
+      currentValue: "gemini-4-neon",
+      options: [
+        { value: "gemini-4-neon", name: "Gemini 4 Neon" },
+        { value: "gemini-4-argon", name: "Gemini 4 Argon" },
+      ],
+    },
+    {
+      type: "select",
+      id: "thought_level",
+      category: "thought_level",
+      currentValue: "high",
+      options: [
+        { value: "low", name: "Low" },
+        { value: "medium", name: "Medium" },
+        { value: "high", name: "High" },
+      ],
+    },
+  ],
 });
 assert.equal(discovered.currentModelId, "gemini-4-neon");
 assert.deepEqual(discovered.models.map((model) => model.id), ["gemini-4-neon", "gemini-4-argon"]);
 assert.equal(discovered.modelSelectorId, "model");
+assert.equal(discovered.currentThoughtLevel, "high");
+assert.equal(discovered.thoughtLevelSelectorId, "thought_level");
+assert.deepEqual(discovered.thoughtLevels.map((level) => level.id), ["low", "medium", "high"]);
 const cwd = process.cwd();
 const shim = fileURLToPath(new URL("./acp-mcp-stdio.mjs", import.meta.url));
 assert.ok(path.isAbsolute(cwd));
