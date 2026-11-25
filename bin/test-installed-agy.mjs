@@ -496,7 +496,7 @@ try {
   });
 
   await test('resolveCustomInstallPath recovers canonical root from desktop files and subfolders', async () => {
-    const d = await fixture();
+    const d = await fixture({ platform: process.platform });
     // 1. Pointing directly to root folder
     const r1 = await resolveCustomInstallPath(d.root);
     assert.equal(r1.ok, true);
@@ -518,7 +518,7 @@ try {
   });
 
   await test('resolveCustomInstallPath recovers canonical root from IDE files and subfolders', async () => {
-    const ide = await ideFixture();
+    const ide = await ideFixture({ platform: process.platform });
     // 1. Pointing directly to root folder
     const r1 = await resolveCustomInstallPath(ide.root);
     assert.equal(r1.ok, true);
