@@ -9,7 +9,7 @@ import { PassThrough } from "node:stream";
 
 import { AcpConnection, AcpError, DshTextMapper, modelsFromSession, pickAuthMethod, PREFERRED_AUTH_METHOD, sessionConfigParams } from "../lib/acp/connection.js";
 import { redact, resolveAcpLaunch } from "../lib/acp/runtime.js";
-import { promptAcp, setAcpRuntimeFactoryForTests, transcriptText } from "../lib/acp/service.js";
+import { promptAcp, setAcpRuntimeFactoryForTests, transcriptBlocks, transcriptText } from "../lib/acp/service.js";
 
 const picked = pickAuthMethod([
   { id: "gemini-api-key", name: "Gemini API key" },
@@ -349,6 +349,7 @@ if (existsSync(process.env.AGY_PEER_ROOT)) {
       { label: "only-allow-always", toolCall: { toolCallId: "c4", name: "dsh_probe" }, options: [{ optionId: "a1", kind: "allow_always" }] },
     ]) {
       let permissionOutcome;
+      let promptId;
       const permStdout = new PassThrough();
       const permRuntime = {
         stdout: permStdout,
@@ -361,6 +362,7 @@ if (existsSync(process.env.AGY_PEER_ROOT)) {
           } else if (msg.method === "session/new") {
             permStdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: { sessionId: "s-perm", configOptions: [{ type: "select", id: "model", category: "model", currentValue: "gemini-4-neon", options: [{ value: "gemini-4-neon" }] }] } })}\n`);
           } else if (msg.method === "session/prompt") {
+            promptId = msg.id;
             if (permScenario.announceFirst) {
               permStdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "session/update", params: { sessionId: "s-perm", update: { sessionUpdate: "tool_call", toolCallId: permScenario.toolCall.toolCallId, name: permScenario.toolCall.name } } })}\n`);
             }
@@ -368,10 +370,12 @@ if (existsSync(process.env.AGY_PEER_ROOT)) {
           } else if (msg.id === 777) {
             permissionOutcome = msg.result;
             permStdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "session/update", params: { sessionId: "s-perm", update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "ok" } } } })}\n`);
-            permStdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: 3, result: { stopReason: "end_turn" } })}\n`);
+            permStdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: promptId, result: { stopReason: "end_turn" } })}\n`);
+          } else if (msg.method === "session/close") {
+            permStdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: {} })}\n`);
           }
         },
-        async close() {},
+        async close() { permStdout.end(); },
       };
       const restore = setAcpRuntimeFactoryForTests(() => permRuntime);
       try {
@@ -625,6 +629,82 @@ if (existsSync(process.env.AGY_PEER_ROOT)) {
     disposeTool();
     disposeApprovalListener();
     await scope.dispose();
+  }
+}
+
+// Multimodal image block forwarding & promptCapabilities.image check
+{
+  const blocks = transcriptBlocks({
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "What is in this image?" },
+          { type: "image", data: "data:image/png;base64,iVBORw0KGgo=", mimeType: "image/png" },
+        ],
+      },
+    ],
+  });
+  assert.deepEqual(blocks, [
+    { type: "text", text: "[user]\nWhat is in this image?" },
+    { type: "image", data: "iVBORw0KGgo=", mimeType: "image/png" },
+  ]);
+
+  let seenPrompt = null;
+  const restore = setAcpRuntimeFactoryForTests(() => {
+    const stdout = new PassThrough();
+    return {
+      stdout,
+      stderrTail: "",
+      exited: new Promise(() => {}),
+      launch: { command: "fake", args: ["acp"], source: "agy-acp" },
+      write(frame) {
+        const msg = JSON.parse(frame);
+        queueMicrotask(() => {
+          if (msg.method === "initialize") {
+            stdout.write(`${JSON.stringify({
+              jsonrpc: "2.0",
+              id: msg.id,
+              result: {
+                protocolVersion: 1,
+                authMethods: [{ id: "oauth-personal" }],
+                agentCapabilities: { promptCapabilities: { image: true } },
+              },
+            })}\n`);
+          } else if (msg.method === "session/new") {
+            stdout.write(`${JSON.stringify({
+              jsonrpc: "2.0",
+              id: msg.id,
+              result: {
+                sessionId: "img-sess",
+                models: { currentModelId: "gemini-4-hydrogen", availableModels: [{ modelId: "gemini-4-hydrogen", name: "Gemini 4 Hydrogen" }] },
+              },
+            })}\n`);
+          } else if (msg.method === "session/prompt") {
+            seenPrompt = msg.params?.prompt;
+            stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: { stopReason: "end_turn" } })}\n`);
+          } else if (msg.method === "session/close") {
+            stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: {} })}\n`);
+          }
+        });
+      },
+      async close() { stdout.end(); },
+    };
+  });
+  try {
+    await promptAcp({ model: "gemini-4-hydrogen", blocks, text: "[user]\nWhat is in this image?" });
+    assert.deepEqual(seenPrompt, blocks);
+
+    if (existsSync(process.env.AGY_PEER_ROOT)) {
+      const { AntigravityAcpAdapter } = await import("../lib/acp/adapter.js");
+      const adapter = new AntigravityAcpAdapter();
+      const listed = await adapter.listModels("agy-next");
+      assert.equal(listed[0].inputModalities.includes("image"), true);
+      const resolved = await adapter.resolveModel("agy-next", "gemini-4-hydrogen");
+      assert.equal(resolved.inputModalities.includes("image"), true);
+    }
+  } finally {
+    restore();
   }
 }
 

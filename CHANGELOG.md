@@ -8,6 +8,7 @@ English | [繁體中文](CHANGELOG.zh-TW.md)
 
 ### Changed
 - **Clearer CLI-First Onboarding & Progress Bar**: When no local `agy` CLI is found, the empty account state prompts for a single-step official CLI install and shows a live download & SHA-512 verification progress bar (`GET /agy-next/api/acp/install-progress`), while keeping the `+ Add account` button fixed at the top-right of the Account Pool header.
+- **Image Input Support (ACP Multimodal Prompts)**: Advertises `inputModalities: ["text", "image"]` when `agentCapabilities.promptCapabilities.image` is supported by the ACP server and forwards DSH image blocks as ACP `{ type: "image", data, mimeType }` content blocks in `session/prompt`.
 - **Updated Package Description**: Removed outdated copy requiring a pre-installed local Antigravity desktop app.
 
 ## [1.2.0] - 2026-11-25

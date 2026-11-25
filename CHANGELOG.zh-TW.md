@@ -8,6 +8,7 @@
 
 ### 變更 (Changed)
 - **優化無 CLI 導引流程與即時安裝進度條**：當偵測不到本機 `agy` CLI 時，空白帳號卡片優先引導「一鍵安裝官方 CLI」，並於安裝期間顯示即時下載百分比、容量（`MB / MB`）與 SHA-512 驗證進度條（`GET /agy-next/api/acp/install-progress`）；同時將 `+ 新增帳號` 按鈕固定顯示於帳號池標題列右側。
+- **支援圖片輸入（ACP 多模態傳圖）**：依 ACP server 回報之 `promptCapabilities.image` 宣告 `inputModalities: ["text", "image"]`，並於 `session/prompt` 將 DSH 的圖片附件轉送為 ACP `{ type: "image", data, mimeType }` 內容區塊。
 - **更新套件說明**：移除要求預先安裝本機 Antigravity 桌面版的過時描述文字。
 
 ## [1.2.0] - 2026-11-25
