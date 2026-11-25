@@ -12,10 +12,10 @@ const cleanupFs = process.versions.electron === undefined
   ? { rm }
   : createRequire(import.meta.url)('original-fs').promises;
 
-const temporary = await mkdtemp(join(tmpdir(), 'agy-installed-test-'));
-// macOS resolves /var through /private/var, so canonicalise the temp root once
-// and compare the canonical directory against a canonicalised prefix.
+// macOS resolves /var through /private/var and Windows runners expand 8.3
+// short temp names (e.g. RUNNER~1) through realpath, so canonicalise once.
 const temporaryRoot = await realpath(tmpdir());
+const temporary = await mkdtemp(join(temporaryRoot, 'agy-installed-test-'));
 const id = '123456789012-' + 'a'.repeat(32) + '.apps.googleusercontent.com';
 const secret = 'GOCSPX-' + 'b'.repeat(28);
 const pkg = { name: 'antigravity', productName: 'Antigravity', version: '2.25.0',

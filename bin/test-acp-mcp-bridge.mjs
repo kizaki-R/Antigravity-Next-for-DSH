@@ -7,6 +7,7 @@ import { classifyAcpError } from "../lib/acp/service.js";
 import { AcpError } from "../lib/acp/connection.js";
 import { sessionConfigParams } from "../lib/acp/connection.js";
 import { spawn } from "node:child_process";
+import os from "node:os";
 import readline from "node:readline";
 
 const rawTools = [
@@ -182,7 +183,7 @@ await bridge.close();
 assert.equal(classifyAcpError(new AcpError("auth", "need login")).code, "auth");
 assert.equal(classifyAcpError(new AcpError("timeout", "slow")).code, "timeout");
 assert.equal(classifyAcpError(new Error("spawn failed")).code, "spawn");
-const params = sessionConfigParams("C:/tmp", [descriptor]);
+const params = sessionConfigParams(os.tmpdir(), [descriptor]);
 assert.equal(params.mcpServers[0].name, "agy-next-dsh-tools");
 assert.equal(params.mcpServers[0].command, descriptor.command);
 assert.ok(params.mcpServers[0].env.every((item) => typeof item.value === "string"));
