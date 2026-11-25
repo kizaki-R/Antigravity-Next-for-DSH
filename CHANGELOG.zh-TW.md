@@ -4,26 +4,25 @@
 
 ---
 
-## [1.2.2] - 2026-11-25
+## [2.0.0] - 2026-11-25
 
-### 修正 (Fixed)
-- **修復 DSH 圖片附件讀取（`ImageBlock.attachment`）**：改寫 `transcriptBlocks()` 與 `AntigravityAcpAdapter.stream()`，透過 `ctx.get("attachments").readImageRequest(ref, target, signal)` 與 `imageRequestTarget()` 實際讀取 DSH 附件庫的 `Uint8Array` 圖片位元組並轉為 ACP `{ type: "image", data, mimeType }` 區塊；`offloaded: true` 圖片依 DSH 規範改寫為 `offloadedImageText` 佔位文字，且附件服務不可用時明確拋錯，避免圖片被靜默忽略。
+本次為底層架構全面重構的大版本更新：模型請求路徑與認證機制從早期的 Cloud Code REST 模擬與桌面版 ASAR 憑證解析，正式切換為 Google 官方 **Antigravity ACP（`agy acp` / `agy_acp_server`）** 協議；同時彙整 `1.2.x` 先行測試版的全部功能與修正，作為 `2.0.0` 正式版同步發行於 GitHub 與 npm。
 
-## [1.2.1] - 2026-11-25
+### 重大變更與升級須知 (Breaking Changes)
 
-### 變更 (Changed)
-- **優化無 CLI 導引流程與即時安裝進度條**：當偵測不到本機 `agy` CLI 時，空白帳號卡片優先引導「一鍵安裝官方 CLI」，並於安裝期間顯示即時下載百分比、容量（`MB / MB`）與 SHA-512 驗證進度條（`GET /agy-next/api/acp/install-progress`）；同時將 `+ 新增帳號` 按鈕固定顯示於帳號池標題列右側。
-- **支援圖片輸入（ACP 多模態傳圖）**：依 ACP server 回報之 `promptCapabilities.image` 宣告 `inputModalities: ["text", "image"]`，並於 `session/prompt` 將 DSH 的圖片附件轉送為 ACP `{ type: "image", data, mimeType }` 內容區塊。
-- **更新套件說明**：移除要求預先安裝本機 Antigravity 桌面版的過時描述文字。
+- **官方 ACP 取代直連 REST 與 ASAR 拆解**：`lib/index.js` 現僅註冊 `AntigravityAcpAdapter`，不再拆解本機桌面版或 IDE 檔案提取 `client_id` / `client_secret`，也不再由外掛直連 Cloud Code 串流端點（舊直連模組僅保留供既有離線單元測試相容使用）。
+- **從 `v1.x` 升級需重新登入 Google 帳號**：`v1.1.0` 及更舊版本存於 `<DSH_HOME>/storages/agy-next-oauth.json` 的 Token 受限於舊版用戶端，無法於 ACP 架構下續期。升級至 `2.0.0` 後，請前往 **設定 → AGY-Next** 重新點選登入完成 Google OAuth 授權。
+- **舊版安裝路徑與來源設定退場**：`clientSource`、`discoveryTimeoutMs`、`projectCacheTtlMs`、`AGY_NEXT_INSTALL_PATH` 與 `AGY_NEXT_CLIENT_SOURCE` 已不再參與請求或登入路徑；若需指定自訂 ACP 執行檔，改設定 `AGY_NEXT_ACP_BIN`。
 
-## [1.2.0] - 2026-11-25
+### 新增與變更 (Added & Changed)
 
-### 變更 (Changed)
-- **官方 Antigravity ACP 架構**：已註冊的 provider 改走 Google 官方 Antigravity ACP server（優先 `agy acp`，其次 `agy_acp_server`），不再依賴拆解桌面版或 IDE 提取 OAuth 用戶端密鑰，provider id 維持 `agy-next`。
-- **DSH 工具橋接與安全授權彈窗**：透過帶認證的本機 loopback MCP bridge（`bin/acp-mcp-stdio.mjs`）將 DSH `ToolRuntime` 工具接進 ACP 工作階段，轉換 Draft 2020-12 JSON Schema 並串接 DSH 核准彈窗；ACP 原生權限要求維持 fail closed。
-- **思考強度（`thought_level`）支援**：支援將 DSH `reasoningEffort` 對應至 ACP `session/set_config_option`（`thought_level`），依模型呈現可選努力等級，並在對話結束後透過 `session/close` 主動關閉暫時工作階段。
-- **讀取 `agy` 系統金鑰圈 / 權杖檔顯示即時額度與真實 Email**：直接讀取系統金鑰圈（`gemini:antigravity`）或 CLI 權杖檔（`antigravity-oauth-token` / `acp_token.json`）中的 `access_token` 查詢 5 小時／每週剩餘額度，自動帶出真實 Google Email 與訂閱方案，並在權杖過期時靜默續期。
-- **無本機 AGY 時自動補裝官方 `agy` CLI**：未偵測到本機 `agy` / `agy_acp_server` 時，在設定頁直接點「登入」或「一鍵安裝官方 CLI」即可自動從 Google 官方下載並通過 SHA-512 校驗安裝至 `<DSH_HOME>/runtimes/agy-next`。
+- **官方 Antigravity ACP 執行引擎（`lib/acp/*`）**：透過標準 stdio JSON-RPC 與官方 ACP server 通訊，provider 識別碼維持 `agy-next`。`resolveAcpLaunch()` 依序搜尋 `AGY_NEXT_ACP_BIN`、`PATH` 上的 `agy` / `agy_acp_server`、各作業系統預設使用者安裝目錄，最後回落至外掛託管的 CLI 目錄。
+- **免預裝桌面版：一鍵安裝官方 `agy` CLI（`lib/acp/installer.js`）**：本機偵測不到 `agy` 時，設定頁顯示單步驟安裝引導並於登入時自動補裝；直接從 Google 官方 release manifest 下載對應平台執行檔至 `<DSH_HOME>/runtimes/agy-next`，限定 `storage.googleapis.com` 來源並驗證 SHA-512 雜湊值，透過 `GET /agy-next/api/acp/install-progress` 回報即時百分比與 `MB / MB` 進度（支援 Windows、macOS 與 Linux x64/arm64，含 Linux musl 偵測）。
+- **系統原生金鑰圈讀取與即時額度（`lib/acp/keyring.js`）**：直接讀取作業系統原生金鑰圈 `gemini:antigravity`（Windows 認證管理員、macOS Keychain、Linux Secret Service）或 `GEMINI_HOME` 權杖檔，在設定頁顯示真實 Google Email、訂閱方案徽章與 5 小時／每週額度窗口，過期時透過 `refreshAcpAuth()` 靜默續期。
+- **DSH MCP 工具橋接與安全核准控管（`lib/acp/mcp-bridge.js`、`bin/acp-mcp-stdio.mjs`）**：透過帶驗證權杖的本機 loopback MCP stdio bridge，將 DSH `ToolRuntime` 工具接進 ACP 工作階段並轉換 Draft 2020-12 JSON Schema，將核准要求導向 DSH 原生彈窗；ACP 原生 `session/request_permission` 維持 fail closed 拒絕處理。
+- **多模態圖片輸入（`lib/acp/service.js`、`lib/acp/adapter.js`）**：依 ACP server 回報的 `promptCapabilities.image` 宣告 `inputModalities: ["text", "image"]`，經 DSH `attachments.readImageRequest(ref, target, signal)` 讀取圖片位元組並轉為 `{ type: "image", data, mimeType }` 內容區塊；`offloaded: true` 圖片轉為 `offloadedImageText` 佔位文字，且附件庫不可用時明確拋錯，避免圖片遭靜默略過。
+- **思考強度對應與工作階段清理**：將 DSH `reasoningEffort` 對應至 ACP `session/set_config_option`（`thought_level`），對話輪次結束後透過 `session/close` 主動關閉暫時工作階段。
+- **診斷端點、介面截圖與測試覆蓋**：`/agy-next/api/diagnostics` 改報 ACP 可達性、認證狀態、協議版本與啟動來源（零 Token 與個人路徑外洩）；同步換新 `assets/screenshot-1.png`～`3.png` 呈現 ACP 一鍵安裝與登入流程；`npm run check` 驗證 55 個模組與介面版本防呆，`npm test` 包含 10 組離線回歸與 ACP 測試套件。
 
 ## [1.1.0] - 2026-11-03
 

@@ -9,54 +9,74 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![DeepSeek Harness](https://img.shields.io/badge/DSH-0.1.5%20~%200.2.x-orange.svg)](https://deepseek.com/harness/)
 
-[English](README.md) | [繁體中文](README.zh-TW.md) | [简体中文](README.zh-CN.md)
+[English](README.md) | [繁體中文](README.zh-TW.md) | 简体中文
 
-非官方的 [DeepSeek Harness](https://deepseek.com/harness/)（DSH）模型提供商插件。将本地安装的官方 Google Antigravity / Cloud Code Assist 模型集成至 DSH 的 Agent 核心循环中，提供商标识为 `agy-next`。
+为 [DeepSeek Harness](https://deepseek.com/harness/)（DSH）开发的 Google Antigravity 模型提供商插件，注册标识为 `agy-next`。
 
-> **免责声明：** 本项目为非官方本地集成，与 Google 或 DeepSeek 均无任何隶属、认可或官方支持关系。使用前请确保拥有合法 Google 账号授权，且本机已安装官方 Antigravity 应用程序。
+自 `v2.0.0` 起，底层全面切换为 Google 官方 **Antigravity ACP（`agy acp` / `agy_acp_server`）** 协议通信，不再解析本地桌面端或 IDE 提取凭据，也不再直连 REST 接口。本机无需预先安装 Antigravity 桌面应用，在 DSH 设置页即可完成官方 CLI 安装、Google 账号登录、实时额度查看，以及工具调用与图片输入。
+
+> **免责声明：** 本项目为非官方社区集成插件，与 Google 或 DeepSeek 均无隶属、认可或官方支持关系。所有登录授权均通过 Google 官方 Antigravity CLI 与您个人账号完成。
 
 ---
 
-## 功能特性
+## v2.0.0 与旧版的区别
 
-- **免手动配置 GCP**：直接从本机安装的官方 Antigravity 桌面端或 Antigravity IDE 解析 OAuth client，无需在 Google Cloud Console 创建项目或密钥。
-- **双架构与 IDE 支持**：同时支持官方桌面端（Electron ASAR）与 Antigravity IDE（VS Code 分支），具备自动降级容错与独立配置能力。
-- **智能路径与快捷方式穿透**：设置页支持粘贴任意安装目录、可执行文件（`Antigravity.exe` / `Antigravity IDE.exe`）、内部目录（`resources/app`）或 Windows 开始菜单 `.lnk` 快捷方式，系统自动向上收敛锁定正规安装根目录。
-- **多账号轮换池**：可添加多个 Google 账号并配置安全阈值；当前账号额度耗尽时，自动切换至备用账号继续对话。
-- **实时额度监控面板**：设置页展示 Gemini、Claude 与 Gemini 4 Argon 的每周及 5 小时额度条与重置倒计时。
-- **思考强度档位调节**：支持推理思考强度调节（Low、Medium、High，适用于 Gemini 4 Argon、Gemini 3.8 Flash 与 Claude 系列）。
-- **本地安全存储**：客户端探索仅读取文件，不启动官方应用。Token 仅保存在本地 `<DSH_HOME>/storages/agy-next-oauth.json`，不上载私钥。
+- **标准 stdio JSON-RPC ACP 引擎**：通过 `AntigravityAcpAdapter` 启动官方 `agy acp`（或 `agy_acp_server`），取代早期读取桌面版 `asar` / IDE `main.js` 提取客户端密钥的做法。
+- **免预装桌面版、一键安装官方 CLI**：检测不到本机 `agy` 时，设置页提供单步安装引导，直接从 Google 官方 manifest 下载并校验 SHA-512 后存放在 `<DSH_HOME>/runtimes/agy-next`，界面实时显示百分比与 `MB / MB` 进度。
+- **系统原生密钥环与实时额度**：自动读取 Windows 凭据管理器、macOS Keychain、Linux Secret Service（`gemini:antigravity`）或 `GEMINI_HOME` 令牌文件，显示登录中的 Google Email、订阅等级徽章及 5 小时／每周额度条，过期时静默续期。
+- **DSH MCP 工具与审批弹窗桥接**：通过带验证令牌的本地 loopback MCP stdio bridge（`bin/acp-mcp-stdio.mjs`），将 DSH `ToolRuntime` 工具安全接入 ACP 会话，并补齐 Draft 2020-12 JSON Schema 规范与审批弹窗流程。
+- **多模态图片输入与思考强度切换**：从 DSH 附件库读取图片字节并转为 ACP 图片内容块发送，按模型映射 `reasoningEffort` 至 ACP `thought_level`，对话结束后通过 `session/close` 清理会话。
+
+---
+
+## 设置界面预览
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="./assets/screenshot-1.png" alt="未安装官方 CLI 引导界面" width="100%" /><br />
+      <sub>1. 未检测到本机 CLI 时提示一键安装</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="./assets/screenshot-2.png" alt="官方 CLI 下载与 SHA-512 校验进度条" width="100%" /><br />
+      <sub>2. 实时下载百分比与 SHA-512 校验进度</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="./assets/screenshot-3.png" alt="准备进行 Google 账号登录界面" width="100%" /><br />
+      <sub>3. CLI 就绪后直接进行 Google 登录</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
 ## 环境要求
 
-1. **DeepSeek Harness**：版本 `0.1.5` ～ `0.2.x`（完整兼容至最新 `0.2.1` 系列），Node.js 运行时 `>=20`。
-2. **官方 Antigravity 安装**：本机已安装官方桌面应用或 Antigravity IDE（支持 Windows、macOS，Linux 适配进行中；*使用插件时无需保持该应用开启*）。
-3. **Google 账号：** 支持浏览器 OAuth 授权且具备访问 Gemini / Cloud Code Assist 服务的权限。
+- **Node.js**：`>= 20`
+- **DeepSeek Harness**：`0.1.5-rc.1` ～ `0.2.x`
+- **支持平台**：Windows、macOS、Linux（`x64` / `arm64`，含 Linux musl 检测）
+- **Google 账号**：支持浏览器 OAuth 授权并具备 Antigravity 使用资格的个人账号
 
 ---
 
-## 安装说明
+## 安装方式
 
-### 方式一：DSH 插件市场安装（推荐）
+### 方式一：DSH 插件市场（推荐）
 
-1. 打开 DSH 侧边栏的 **“插件” → “插件市场”**。
+1. 打开 DSH 侧边栏的 **「插件」→「插件市场」**。
 2. 搜索 `agy-next` 或 `antigravity`。
-3. 点击 **“安装”**，完成后重启 DSH。
+3. 点击 **「安装」**，完成后重载或重启 DSH。
 
-### 方式二：终端命令行安装
+### 方式二：npm 命令行安装
 
-在 DSH 桌面 profile 目录下直接安装：
+在 DSH profile 目录下执行：
 
 ```bash
 cd ~/.dsh/profiles/desktop
-npm install agy-next@latest
+npm install agy-next@2.0.0
 ```
 
-### 方式三：本地开发模式（CLI / Link）
-
-从本地源码调试：
+### 方式三：本地开发链接
 
 ```bash
 dsh plugin --profile <profile> add link:/absolute/path/to/agy-next
@@ -64,69 +84,75 @@ dsh plugin --profile <profile> add link:/absolute/path/to/agy-next
 
 ---
 
-## 快速使用
+## 快速上手
 
-### 1. 账号配置
+1. 打开 DSH 的 **「设置」→「AGY-Next」**。
+2. 若界面提示尚未安装官方 CLI，点击 **「一键安装官方 CLI」**，等待下载与 SHA-512 校验完成。
+3. 点击 **「登录」**，在浏览器完成 Google 账号授权。
+4. 确认账号 Email、订阅方案与剩余额度显示后，即可在对话窗口选用 `Antigravity Next` 下的各模型。
 
-在 DSH 中进入 **“设置” → “AGY-Next”**：
+> 若您从 `v1.x` 升级而来，旧版架构签发的令牌无法在 ACP 下续期，升级后请在 **「设置」→「AGY-Next」** 重新登录一次 Google 账号。
 
-1. **检查状态**：确认页面识别到本地 Antigravity 桌面端或 IDE。
-2. **自定义路径（可选）**：若安装在非标准目录，在“自定义安装路径”输入框粘贴文件夹、可执行文件或开始菜单快捷方式，点击 **“检查”** ➔ **“保存”**。
-3. **添加账号**：点击 **“登录 / 添加账号”**，系统将调用浏览器打开 Google 官方授权页。
-4. 授权成功后账号即进入账号池，并实时展示各模型额度。
-
-*CLI 备用命令：*
+也可在 `agy-next/` 目录下使用 CLI 辅助命令：
 
 ```bash
-npm run login              # 登录新账号
-npm run login -- --status  # 查看当前活动账号与额度
-npm run login -- --force   # 强制重新认证
-npm run login -- --logout  # 清除已保存凭据
+npm run login -- --check-install   # 检查本机 ACP CLI 状态
+npm run login                      # 必要时自动安装 CLI 并发起 Google 登录
+npm run login -- --status          # 查看登录状态、账号 Email 与令牌来源
+npm run login -- --force           # 强制重新进行 Google 授权
+npm run login -- --logout          # 登出 Antigravity ACP 账号
 ```
+
+详细说明与排障指南请参阅 [SETUP.md](SETUP.md)。
 
 ---
 
-## 进阶配置
+## 可执行文件搜索顺序与配置说明
 
-如需调整参数，可编辑 profile 目录下的 `cordis.yml`：
+`resolveAcpLaunch()` 按以下顺序查找可用的 ACP 可执行文件（命中即止）：
 
-```yaml
-- id: agy-next
-  name: agy-next
-  config:
-    clientSource: "auto"             # "auto" (默认，桌面端优先且支持 IDE 容错降级)、"desktop" 或 "ide"
-    credentialPath: ""               # 默认为 <DSH_HOME>/storages/agy-next-oauth.json
-    streamIdleTimeoutMs: 300000      # 5 分钟空闲流保护超时
-    discoveryTimeoutMs: 8000         # 本地客户端探测超时
-    projectCacheTtlMs: 1800000       # 项目元数据缓存生存期（30 分钟）
-    runtimeModel: ""                 # 可选：固定指定后端模型 ID
-```
+1. 环境变量 `AGY_NEXT_ACP_BIN` 指定的可执行文件路径
+2. `PATH` 中的 `agy`（以 `agy acp` 启动）
+3. `PATH` 中的 `agy_acp_server`
+4. 各操作系统常见用户安装目录（Windows：`%LOCALAPPDATA%\agy\bin\agy.exe`；macOS / Linux：`~/.local/bin/agy`、`~/.local/bin/antigravity`、`~/.agy/bin/agy`）
+5. 插件通过一键安装存放在 `<DSH_HOME>/runtimes/agy-next` 的托管 CLI
+
+有效配置项（`cordis.yml` / 环境变量）：
+
+| 配置键名 | 环境变量 | 说明 |
+|---|---|---|
+| `credentialPath` | `AGY_NEXT_CREDENTIAL_PATH` | 指定账号元数据与模型可见性配置路径（默认 `<DSH_HOME>/storages/agy-next-oauth.json`） |
+| — | `AGY_NEXT_ACP_BIN` | 手动指定自定义 `agy` 可执行文件完整路径 |
+
+旧版 `v1.x` 桌面端架构参数（`clientSource`、`discoveryTimeoutMs`、`projectCacheTtlMs`、`clientId`、`clientSecret`、`clientPath`、`AGY_NEXT_INSTALL_PATH`）已于 `v2.0.0` 退场，不再影响运行与登录流程。
 
 ---
 
-## 支持模型列表
+## 支持模型清单
 
-| 模型系列 | 代表型号 | 上下文长度 | 特性支持 |
+内置默认模型列表如下，并在连接 ACP server 时随账号返回动态更新：
+
+| 模型家族 | 代表型号 | 上下文长度 | 特性说明 |
 |---|---|---|---|
-| **Gemini 4 Argon** | `gemini-4-argon` | 1M tokens | Low / Medium / High 思考档位，5 小时与每周额度独立统计 |
-| **Gemini 3 / 2.5** | `gemini-3.8-flash`、`gemini-3-flash`、`gemini-2.5-pro`、`gemini-2.5-flash` | 1M tokens | 高速多模态流式交互，工具调用 |
-| **Claude 系列** | `claude-sonnet-5-5`、`claude-opus-5-5`、`claude-opus-4-6`、`claude-sonnet-4-6` | 1M tokens | 深度集成 Cloud Code Assist 的 Claude 运行时 |
-| **开源模型** | `gpt-oss-120b` | 128k tokens | 大参数开源权重推理 |
+| **Gemini 4 Argon** | `gemini-4-argon` | 1M tokens | 支持 `low` / `medium` / `high` 思考档位、多模态图片输入 |
+| **Gemini 3 / 2.5** | `gemini-3.8-flash`、`gemini-3-flash`、`gemini-3.1-flash-lite`、`gemini-2.5-pro`、`gemini-2.5-flash` | 1M tokens | 支持多模态图片输入与 MCP 工具桥接 |
+| **Claude 系列** | `claude-sonnet-5-5`、`claude-opus-5-5`、`claude-opus-4-6`、`claude-sonnet-4-6` | 250k ～ 1M tokens | 通过 Antigravity ACP 运行，支持思考强度配置 |
+| **开源大模型** | `gpt-oss-120b` | 128k tokens | 通过 Antigravity ACP 提供推理 |
 
 ---
 
-## 开发与测试
+## 开发与离线验证
 
-在 `agy-next/` 目录下运行完整离线测试集：
+在 `agy-next/` 目录下执行：
 
 ```bash
-npm run check          # 检查全量 43 个源码模块的语法
-npm test               # 离线回归测试集（36 个用例）
-npm run test:peers     # 严格主控 peers 契约测试（不允许跳过）
-npm run verify:peers   # 对真实 peers 验证宿主契约
+npm run check          # 检查全部 55 个模块语法与界面版本校验
+npm test               # 运行 10 组离线回归与 ACP 测试套件
+npm run test:peers     # 配合宿主 peer 依赖运行集成测试
+npm run verify:peers   # 运行跨版本 peer 离线契约检查
 ```
 
-进行 peers 契约测试前配置主控依赖路径：
+运行 peer 契约测试时，请指定宿主 `node_modules` 路径：
 
 ```powershell
 $env:AGY_PEER_ROOT = 'C:\path\to\dsh\node_modules'
@@ -135,11 +161,11 @@ npm run test:peers
 
 ---
 
-## 安全机制
+## 安全与隐私边界
 
-- **不内置密钥**：代码库不包含任何 Google Client ID 或 Client Secret，全部由本地应用资源动态解析。
-- **存储隔离**：凭据保存在 DSH 专属的 `agy-next-oauth.json` 中，不读取或修改官方应用的本地数据库。
-- **墓碑机制（Tombstone）**：登出所有账号时写入标有 `loggedOut: true` 的空文件，彻底杜绝历史配置自动复活旧账号。
+- **不内置客户端密钥**：源码与发布包不包含任何 Google OAuth Client ID 或 Client Secret。
+- **凭据由系统管理**：Google OAuth 授权由官方 `agy` 写入系统密钥环（`gemini:antigravity`）或 `GEMINI_HOME` 令牌文件，插件不私自复制密码。
+- **脱敏诊断报告**：`GET /agy-next/api/diagnostics` 仅输出 ACP 可达性、协议版本与启动来源等状态字段，不含任何 Token 或本机个人目录路径。
 
 ---
 

@@ -4,26 +4,25 @@ English | [繁體中文](CHANGELOG.zh-TW.md)
 
 ---
 
-## [1.2.2] - 2026-11-25
+## [2.0.0] - 2026-11-25
 
-### Fixed
-- **DSH Image Attachment Bridge (`ImageBlock.attachment`)**: Updated `transcriptBlocks()` and `AntigravityAcpAdapter.stream()` to read normalized image bytes from DSH's `attachments.readImageRequest(ref, target, signal)` via `imageRequestTarget()`, convert `Uint8Array` payloads to base64 `{ type: "image", data, mimeType }` ACP blocks, emit DSH's `offloadedImageText` placeholder for `offloaded: true` images, and fail loudly if the attachment store is unavailable instead of dropping images silently.
+`2.0.0` rewrites the provider runtime onto Google's official **Antigravity ACP (`agy acp` / `agy_acp_server`)** protocol, replacing the v1.x Cloud Code REST transport and local desktop/IDE ASAR credential extraction. This release consolidates all `1.2.x` npm builds for public release on GitHub and npm.
 
-## [1.2.1] - 2026-11-25
+### Breaking Changes
 
-### Changed
-- **Clearer CLI-First Onboarding & Progress Bar**: When no local `agy` CLI is found, the empty account state prompts for a single-step official CLI install and shows a live download & SHA-512 verification progress bar (`GET /agy-next/api/acp/install-progress`), while keeping the `+ Add account` button fixed at the top-right of the Account Pool header.
-- **Image Input Support (ACP Multimodal Prompts)**: Advertises `inputModalities: ["text", "image"]` when `agentCapabilities.promptCapabilities.image` is supported by the ACP server and forwards DSH image blocks as ACP `{ type: "image", data, mimeType }` content blocks in `session/prompt`.
-- **Updated Package Description**: Removed outdated copy requiring a pre-installed local Antigravity desktop app.
+- **Official ACP replaces direct REST and ASAR extraction**: `lib/index.js` now registers only `AntigravityAcpAdapter`. The plugin no longer parses desktop/IDE binaries for OAuth client secrets or issues direct Cloud Code streaming requests (legacy direct modules remain only for existing offline unit tests).
+- **Re-authentication required when upgrading from `v1.x`**: Tokens stored under `<DSH_HOME>/storages/agy-next-oauth.json` by `v1.1.0` or earlier are bound to the old client flow and cannot be refreshed under ACP. After upgrading, sign in again under **Settings → AGY-Next**.
+- **Legacy client discovery config retired**: `clientSource`, `discoveryTimeoutMs`, `projectCacheTtlMs`, `AGY_NEXT_INSTALL_PATH`, and `AGY_NEXT_CLIENT_SOURCE` no longer affect requests or login. To pin a custom ACP binary, set `AGY_NEXT_ACP_BIN`.
 
-## [1.2.0] - 2026-11-25
+### Added & Changed
 
-### Changed
-- **Official Antigravity ACP Runtime**: The registered provider communicates directly with Google's official Antigravity ACP server (`agy acp`, else `agy_acp_server`), instead of extracting OAuth client credentials from desktop/IDE bundles. Provider id stays `agy-next`.
-- **DSH Tool Bridging & Permission Approvals**: Bridges DSH `ToolRuntime` tools into ACP sessions over an authenticated loopback MCP stdio bridge (`bin/acp-mcp-stdio.mjs`), normalizing Draft 2020-12 schemas and routing tool approvals through DSH's approval modal (`session/request_permission` fails closed when unavailable).
-- **Reasoning Effort (`thought_level`)**: Maps DSH `reasoningEffort` to ACP `session/set_config_option` (`thought_level`), advertises supported efforts per model, and closes ephemeral ACP sessions cleanly via `session/close`.
-- **Live Account Email & Quota via Keyring/File Token**: Reads the active `agy` OAuth access token from the OS keyring (`gemini:antigravity`) or CLI token file (`antigravity-oauth-token` / `acp_token.json`) to display the real Google email, subscription tier badge, and 5-hour/weekly quota windows with silent renewal on expiry.
-- **Zero-Install Managed CLI Fallback**: When neither `agy` nor `agy_acp_server` is installed locally, Settings sign-in (and the one-click CLI install button) automatically downloads and SHA-512 verifies the official `agy` CLI binary under `<DSH_HOME>/runtimes/agy-next`.
+- **Official Antigravity ACP runtime (`lib/acp/*`)**: Speaks JSON-RPC over stdio with the official ACP server (provider id remains `agy-next`). `resolveAcpLaunch()` checks `AGY_NEXT_ACP_BIN`, `agy` on `PATH`, `agy_acp_server` on `PATH`, per-user default install locations, and finally the plugin-managed CLI directory.
+- **Zero-preinstall managed CLI installer (`lib/acp/installer.js`)**: When no local `agy` binary is found, Settings displays a one-click install card (also triggered on login) that downloads the official release archive into `<DSH_HOME>/runtimes/agy-next`, enforces `storage.googleapis.com` URL and SHA-512 verification, and streams live percentage and `MB / MB` progress via `GET /agy-next/api/acp/install-progress` (Windows, macOS, and Linux x64/arm64, including musl detection).
+- **OS keyring credential reading & live quota (`lib/acp/keyring.js`)**: Reads active OAuth tokens from the native OS keyring (`gemini:antigravity` via Windows Credential Manager, macOS Keychain, or Linux Secret Service) or `GEMINI_HOME` token files to display the real Google email, subscription tier badge, and 5-hour/weekly quota windows, with silent refresh via `refreshAcpAuth()`.
+- **DSH MCP tool bridge & approval routing (`lib/acp/mcp-bridge.js`, `bin/acp-mcp-stdio.mjs`)**: Exposes DSH `ToolRuntime` tools inside ACP sessions over an authenticated loopback MCP stdio bridge, normalizes Draft 2020-12 JSON schemas, and routes tool approvals through DSH's approval modal while keeping native ACP `session/request_permission` fail-closed (`cancelled`).
+- **Multimodal image prompts (`lib/acp/service.js`, `lib/acp/adapter.js`)**: Advertises `inputModalities: ["text", "image"]` when `promptCapabilities.image` is enabled, resolves DSH `ImageBlock.attachment` bytes via `ctx.get("attachments").readImageRequest(ref, target, signal)`, emits `offloadedImageText` placeholders for `offloaded: true` images, and throws explicitly when the attachment store is unavailable rather than dropping images silently.
+- **Reasoning effort & session cleanup**: Maps DSH `reasoningEffort` to ACP `session/set_config_option` (`thought_level`) and closes ephemeral sessions cleanly via `session/close`.
+- **Diagnostics, screenshots & test coverage**: Updated `/agy-next/api/diagnostics` to report ACP reachability, auth state, protocol version, and launch source without leaking tokens or absolute paths; refreshed `assets/screenshot-1.png`–`3.png` to show the ACP installer and sign-in flow; `npm run check` covers 55 modules plus UI version checks and `npm test` runs 10 offline regression and ACP suites.
 
 ## [1.1.0] - 2026-11-03
 
