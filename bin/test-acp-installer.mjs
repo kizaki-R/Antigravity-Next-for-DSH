@@ -8,6 +8,7 @@ import path from "node:path";
 import {
   antigravityCliTarget,
   findInstalledManagedAcpCli,
+  getAcpInstallProgress,
   installManagedAcpCli,
   parseAntigravityCliRelease,
   setManagedAcpRootForCache,
@@ -114,7 +115,10 @@ try {
         { status: 200, headers: { "content-type": "application/json" } },
       );
     }
-    return new Response(payload, { status: 200 });
+    return new Response(payload, {
+      status: 200,
+      headers: { "content-length": String(payload.length) },
+    });
   };
 
   await assert.rejects(
@@ -127,14 +131,23 @@ try {
     }),
     /SHA-512 verification failed/,
   );
+  assert.equal(getAcpInstallProgress().phase, "error");
 
+  const seenPhases = [];
   const installed = await installManagedAcpCli({
     env: { DSH_HOME: dshHome },
     platform: "win32",
     arch: "x64",
     homedir: () => fakeHome,
     fetch: mockFetch(),
+    onProgress: (p) => seenPhases.push({ phase: p.phase, percent: p.percent, totalBytes: p.totalBytes }),
   });
+  assert.ok(seenPhases.some((p) => p.phase === "manifest"));
+  assert.ok(seenPhases.some((p) => p.phase === "downloading" && p.totalBytes === payload.length && p.percent === 100));
+  assert.ok(seenPhases.some((p) => p.phase === "verifying"));
+  assert.equal(getAcpInstallProgress().phase, "ready");
+  assert.equal(getAcpInstallProgress().active, false);
+  assert.equal(getAcpInstallProgress().percent, 100);
   assert.equal(installed.version, "1.5.17");
   assert.ok(fs.existsSync(installed.path));
   assert.deepEqual(await fsp.readFile(installed.path), payload);

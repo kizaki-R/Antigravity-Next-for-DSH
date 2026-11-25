@@ -1,7 +1,7 @@
 {
   "name": "agy-next",
   "version": "1.2.0",
-  "description": "Antigravity provider for DeepSeek Harness — requires the official locally installed Antigravity app",
+  "description": "Antigravity ACP provider for DeepSeek Harness — Google OAuth, live quota tracking, and official CLI runtime",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
