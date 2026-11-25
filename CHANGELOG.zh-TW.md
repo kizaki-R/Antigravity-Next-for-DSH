@@ -4,14 +4,14 @@
 
 ---
 
-## [Unreleased]
+## [1.2.0] - 2026-11-25
 
-### 變更
-- 已註冊的 provider 改走官方 Antigravity ACP server（先 `agy acp`，否則 `agy_acp_server`），不再走 Cloud Code Assist 請求路徑。provider id 仍是 `agy-next`。
-- 設定頁登入改呼叫 ACP `authenticate`，使用 server 自己廣告的 `oauth-personal`。Token 留在 Antigravity 自己的儲存，此外掛不讀取。一般對話與模型清單不會再呼叫 `authenticate`。
-- 模型清單來自 ACP `session/new`。工具回合尚未接通；ACP 原生權限要求一律拒絕。
-
-Cloud Code adapter 類別仍留在樹裡，供既有離線測試使用，但已不再註冊。
+### 變更 (Changed)
+- **官方 Antigravity ACP 架構**：已註冊的 provider 改走 Google 官方 Antigravity ACP server（優先 `agy acp`，其次 `agy_acp_server`），不再依賴拆解桌面版或 IDE 提取 OAuth 用戶端密鑰，provider id 維持 `agy-next`。
+- **DSH 工具橋接與安全授權彈窗**：透過帶認證的本機 loopback MCP bridge（`bin/acp-mcp-stdio.mjs`）將 DSH `ToolRuntime` 工具接進 ACP 工作階段，轉換 Draft 2020-12 JSON Schema 並串接 DSH 核准彈窗；ACP 原生權限要求維持 fail closed。
+- **思考強度（`thought_level`）支援**：支援將 DSH `reasoningEffort` 對應至 ACP `session/set_config_option`（`thought_level`），依模型呈現可選努力等級，並在對話結束後透過 `session/close` 主動關閉暫時工作階段。
+- **讀取 `agy` 系統金鑰圈 / 權杖檔顯示即時額度與真實 Email**：直接讀取系統金鑰圈（`gemini:antigravity`）或 CLI 權杖檔（`antigravity-oauth-token` / `acp_token.json`）中的 `access_token` 查詢 5 小時／每週剩餘額度，自動帶出真實 Google Email 與訂閱方案，並在權杖過期時靜默續期。
+- **無本機 AGY 時自動補裝官方 `agy` CLI**：未偵測到本機 `agy` / `agy_acp_server` 時，在設定頁直接點「登入」或「一鍵安裝官方 CLI」即可自動從 Google 官方下載並通過 SHA-512 校驗安裝至 `<DSH_HOME>/runtimes/agy-next`。
 
 ## [1.1.0] - 2026-11-03
 

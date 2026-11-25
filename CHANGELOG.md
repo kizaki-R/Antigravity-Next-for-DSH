@@ -4,14 +4,14 @@ English | [繁體中文](CHANGELOG.zh-TW.md)
 
 ---
 
-## [Unreleased]
+## [1.2.0] - 2026-11-25
 
 ### Changed
-- The registered provider now talks to the official Antigravity ACP server (`agy acp`, else `agy_acp_server`) instead of the Cloud Code Assist request path. Provider id stays `agy-next`.
-- Settings sign-in calls ACP `authenticate` with the server-advertised `oauth-personal` method. Tokens stay in Antigravity's own store and are not read by this plugin. Chat and model listing do not call `authenticate` again.
-- The model list comes from ACP `session/new`. Tool rounds are not bridged yet; native ACP permission requests are cancelled.
-
-The Cloud Code adapter class remains in the tree for the existing offline tests. It is no longer registered.
+- **Official Antigravity ACP Runtime**: The registered provider communicates directly with Google's official Antigravity ACP server (`agy acp`, else `agy_acp_server`), instead of extracting OAuth client credentials from desktop/IDE bundles. Provider id stays `agy-next`.
+- **DSH Tool Bridging & Permission Approvals**: Bridges DSH `ToolRuntime` tools into ACP sessions over an authenticated loopback MCP stdio bridge (`bin/acp-mcp-stdio.mjs`), normalizing Draft 2020-12 schemas and routing tool approvals through DSH's approval modal (`session/request_permission` fails closed when unavailable).
+- **Reasoning Effort (`thought_level`)**: Maps DSH `reasoningEffort` to ACP `session/set_config_option` (`thought_level`), advertises supported efforts per model, and closes ephemeral ACP sessions cleanly via `session/close`.
+- **Live Account Email & Quota via Keyring/File Token**: Reads the active `agy` OAuth access token from the OS keyring (`gemini:antigravity`) or CLI token file (`antigravity-oauth-token` / `acp_token.json`) to display the real Google email, subscription tier badge, and 5-hour/weekly quota windows with silent renewal on expiry.
+- **Zero-Install Managed CLI Fallback**: When neither `agy` nor `agy_acp_server` is installed locally, Settings sign-in (and the one-click CLI install button) automatically downloads and SHA-512 verifies the official `agy` CLI binary under `<DSH_HOME>/runtimes/agy-next`.
 
 ## [1.1.0] - 2026-11-03
 
