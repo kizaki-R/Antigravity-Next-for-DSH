@@ -4,6 +4,11 @@
 
 ---
 
+## [1.2.2] - 2026-11-25
+
+### 修正 (Fixed)
+- **修復 DSH 圖片附件讀取（`ImageBlock.attachment`）**：改寫 `transcriptBlocks()` 與 `AntigravityAcpAdapter.stream()`，透過 `ctx.get("attachments").readImageRequest(ref, target, signal)` 與 `imageRequestTarget()` 實際讀取 DSH 附件庫的 `Uint8Array` 圖片位元組並轉為 ACP `{ type: "image", data, mimeType }` 區塊；`offloaded: true` 圖片依 DSH 規範改寫為 `offloadedImageText` 佔位文字，且附件服務不可用時明確拋錯，避免圖片被靜默忽略。
+
 ## [1.2.1] - 2026-11-25
 
 ### 變更 (Changed)

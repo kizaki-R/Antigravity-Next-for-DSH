@@ -4,6 +4,11 @@ English | [繁體中文](CHANGELOG.zh-TW.md)
 
 ---
 
+## [1.2.2] - 2026-11-25
+
+### Fixed
+- **DSH Image Attachment Bridge (`ImageBlock.attachment`)**: Updated `transcriptBlocks()` and `AntigravityAcpAdapter.stream()` to read normalized image bytes from DSH's `attachments.readImageRequest(ref, target, signal)` via `imageRequestTarget()`, convert `Uint8Array` payloads to base64 `{ type: "image", data, mimeType }` ACP blocks, emit DSH's `offloadedImageText` placeholder for `offloaded: true` images, and fail loudly if the attachment store is unavailable instead of dropping images silently.
+
 ## [1.2.1] - 2026-11-25
 
 ### Changed

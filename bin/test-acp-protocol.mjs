@@ -632,9 +632,78 @@ if (existsSync(process.env.AGY_PEER_ROOT)) {
   }
 }
 
-// Multimodal image block forwarding & promptCapabilities.image check
+// Multimodal image block forwarding (DSH attachment ref, offloaded placeholder, inline fallback, & fail-loud guard)
 {
-  const blocks = transcriptBlocks({
+  const rawPng = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const attachmentRef = {
+    attachmentId: "sha256:1234567890abcdef",
+    mediaType: "image/png",
+    bytes: rawPng.byteLength,
+    width: 120,
+    height: 80,
+    name: "screenshot.png",
+  };
+  let seenTarget = null;
+  const attachmentBlocks = await transcriptBlocks(
+    {
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "What is in this screenshot?" },
+            { type: "image", attachment: attachmentRef },
+          ],
+        },
+      ],
+    },
+    {
+      attachments: {
+        async readImageRequest(ref, target) {
+          assert.equal(ref.attachmentId, attachmentRef.attachmentId);
+          seenTarget = target;
+          return {
+            attachment: ref,
+            data: rawPng,
+            mediaType: "image/png",
+            bytes: rawPng.byteLength,
+            width: 120,
+            height: 80,
+          };
+        },
+      },
+      imageRequestTarget: (img) => ({ width: img.width, height: img.height, maxBytes: img.bytes }),
+    },
+  );
+  assert.deepEqual(seenTarget, { width: 120, height: 80, maxBytes: rawPng.byteLength });
+  assert.deepEqual(attachmentBlocks, [
+    { type: "text", text: "[user]\nWhat is in this screenshot?" },
+    { type: "image", data: Buffer.from(rawPng).toString("base64"), mimeType: "image/png" },
+  ]);
+
+  const offloadedBlocks = await transcriptBlocks({
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Earlier screenshot:" },
+          { type: "image", attachment: attachmentRef, offloaded: true },
+        ],
+      },
+    ],
+  });
+  assert.equal(offloadedBlocks.length, 1);
+  assert.equal(offloadedBlocks[0].type, "text");
+  assert.match(offloadedBlocks[0].text, /image omitted to fit request image limits/);
+
+  await assert.rejects(
+    () =>
+      transcriptBlocks({
+        messages: [{ role: "user", content: [{ type: "image", attachment: attachmentRef }] }],
+      }),
+    /attachment service is unavailable/,
+  );
+
+  const blocks = await transcriptBlocks({
     messages: [
       {
         role: "user",
@@ -697,11 +766,47 @@ if (existsSync(process.env.AGY_PEER_ROOT)) {
 
     if (existsSync(process.env.AGY_PEER_ROOT)) {
       const { AntigravityAcpAdapter } = await import("../lib/acp/adapter.js");
-      const adapter = new AntigravityAcpAdapter();
+      const mockCtx = {
+        get(serviceName) {
+          if (serviceName === "attachments") {
+            return {
+              async readImageRequest(ref) {
+                return {
+                  attachment: ref,
+                  data: rawPng,
+                  mediaType: "image/png",
+                  bytes: rawPng.byteLength,
+                  width: 120,
+                  height: 80,
+                };
+              },
+            };
+          }
+          return undefined;
+        },
+      };
+      const adapter = new AntigravityAcpAdapter(mockCtx);
       const listed = await adapter.listModels("agy-next");
       assert.equal(listed[0].inputModalities.includes("image"), true);
       const resolved = await adapter.resolveModel("agy-next", "gemini-4-hydrogen");
       assert.equal(resolved.inputModalities.includes("image"), true);
+
+      seenPrompt = null;
+      for await (const _chunk of adapter.stream({
+        provider: "agy-next",
+        model: "gemini-4-hydrogen",
+        cwd,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "What is in this screenshot?" },
+              { type: "image", attachment: attachmentRef },
+            ],
+          },
+        ],
+      })) {}
+      assert.deepEqual(seenPrompt, attachmentBlocks);
     }
   } finally {
     restore();
