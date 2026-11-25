@@ -238,7 +238,7 @@ try {
   console.log(`launch skipped: ${error.message}`);
 }
 if (launch) {
-  assert.ok(launch.source === "agy-acp" || launch.source === "agy-user-install" || launch.source === "agy_acp_server");
+  assert.ok(launch.source === "agy-acp" || launch.source === "agy-user-install" || launch.source === "agy_acp_server" || launch.source === "agy-managed");
   assert.ok(Array.isArray(launch.args));
   console.log(`launch source: ${launch.source}`);
 }
