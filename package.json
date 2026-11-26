@@ -1,6 +1,6 @@
 {
   "name": "agy-next",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Antigravity ACP provider for DeepSeek Harness — zero-preinstall official CLI, Google OAuth, live quota tracking, MCP tools, and multimodal image input",
   "type": "module",
   "main": "lib/index.js",

@@ -4,6 +4,13 @@
 
 ---
 
+## [2.0.1] - 2026-11-26
+
+### 問題修正 (Fixed)
+- **動態 ACP 模型群組歸類（`lib/web-api.js`、`lib/ui.js`）**：當配額 API 未回報 `modelIds` 時，改由合併靜態 `MODELS` 與動態 ACP 清單後的完整模型列表推導配額群組與可用狀態；並於設定頁加入對舊快取快照的前綴備援歸類（`gemini-`、`claude-`、`gpt-`），避免 `gemini-4-hydrogen` 等動態模型落入「其他」群組。
+- **設定頁模型排序最佳化（`lib/ui.js`）**：各群組內改依「可用優先 → 供應商 → 版本由新到舊 → 同代高階優先（`Ultra` > `Opus` > `Hydrogen` > `Pro` > `Argon` > `Sonnet` > `Haiku` > `Flash`）」排序，讓最新高階且可用的模型固定顯示於頂端。
+- **跨平台測試路徑與 macOS IDE 探索修正（`lib/installed-agy.js`、`bin/test-acp-mcp-bridge.mjs`、`bin/test-installed-agy.mjs`）**：規範化跨平台暫存路徑、修正橋接測試改用 `os.tmpdir()`、將 macOS `.app` 向上查找深度擴充至 5 層，並於 `bin/test-acp-quota.mjs` 補上動態 ACP 模型群組回歸測試。
+
 ## [2.0.0] - 2026-11-25
 
 本次為底層架構全面重構的大版本更新：模型請求路徑與認證機制從早期的 Cloud Code REST 模擬與桌面版 ASAR 憑證解析，正式切換為 Google 官方 **Antigravity ACP（`agy acp` / `agy_acp_server`）** 協議；同時彙整 `1.2.x` 先行測試版的全部功能與修正，作為 `2.0.0` 正式版同步發行於 GitHub 與 npm。

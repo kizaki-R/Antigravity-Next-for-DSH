@@ -4,6 +4,13 @@ English | [繁體中文](CHANGELOG.zh-TW.md)
 
 ---
 
+## [2.0.1] - 2026-11-26
+
+### Fixed
+- **Dynamic ACP model grouping (`lib/web-api.js`, `lib/ui.js`)**: Derived quota fallback `modelIds` and group availability from the merged catalog (static `MODELS` plus dynamically discovered ACP models) and added a family-prefix fallback (`gemini-`, `claude-`, `gpt-`) when rendering cached usage snapshots, preventing new ACP models such as `gemini-4-hydrogen` from falling into the "Other" group.
+- **Settings model list ordering (`lib/ui.js`)**: Ordered models inside each settings group so available (`served`) models appear first, followed by newer versions and higher tiers (`Ultra` > `Opus` > `Hydrogen` > `Pro` > `Argon` > `Sonnet` > `Haiku` > `Flash`), keeping newly rolled-out flagship models at the top.
+- **Cross-platform CI & macOS IDE lookup (`lib/installed-agy.js`, `bin/test-acp-mcp-bridge.mjs`, `bin/test-installed-agy.mjs`)**: Canonicalised temp roots, used `os.tmpdir()` in bridge tests, expanded macOS `.app` ancestor lookup to 5 levels, and added regression coverage for dynamic ACP quota grouping (`bin/test-acp-quota.mjs`).
+
 ## [2.0.0] - 2026-11-25
 
 `2.0.0` rewrites the provider runtime onto Google's official **Antigravity ACP (`agy acp` / `agy_acp_server`)** protocol, replacing the v1.x Cloud Code REST transport and local desktop/IDE ASAR credential extraction. This release consolidates all `1.2.x` npm builds for public release on GitHub and npm.

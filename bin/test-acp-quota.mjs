@@ -193,12 +193,80 @@ import { buildStatus } from "../lib/web-api.js";
   assert.equal(status.accounts[0].email, "acp-user@example.com");
   assert.equal(status.accounts[0].plan.label, "Google AI Pro");
   assert.ok(status.accounts[0].usage?.groups?.length === 1);
+  assert.equal(status.accounts[0].usage.groups[0].available, true);
+  assert.ok(
+    status.accounts[0].usage.groups[0].modelIds.includes("gemini-4-hydrogen"),
+    "dynamic ACP Gemini models should be included in the gemini quota group instead of falling into Other",
+  );
   assert.equal(status.accounts[0].usage.groups[0].fiveHour.remainingFraction, 0.75);
   assert.equal(status.accounts[0].usage.groups[0].weekly.remainingFraction, 0.9);
   // Persisted placeholder upgrade + usage snapshot in store without writing tokens
   assert.equal(book.accounts[0].email, "acp-user@example.com");
   assert.equal(book.accounts[0].access, undefined);
   assert.equal(book.accounts[0].refresh, undefined);
+}
+
+// 5. Dynamic ACP models join matching family fallback and retired-only groups remain unavailable
+{
+  const book = {
+    activeId: "acp-1",
+    autoSwitch: { enabled: false, thresholdPct: 80 },
+    accounts: [{ id: "acp-1", email: "acp-user@example.com", source: "acp", clientRecorded: true, addedAt: 1000 }],
+  };
+  const store = {
+    readBook: async () => structuredClone(book),
+    readOrImport: async () => structuredClone(book.accounts[0]),
+    modifyAccount: async () => true,
+  };
+  const status = await buildStatus({
+    store,
+    settings: { disabledModels: [] },
+    deps: {
+      describeAcpStatus: async () => ({
+        reachable: true,
+        authenticated: true,
+        agentInfo: { name: "Antigravity CLI", version: "1.5.10" },
+        protocolVersion: 1,
+        authMethods: [{ id: "oauth-personal" }],
+        mcpCapabilities: { http: false, sse: false },
+        models: [
+          { id: "gemini-4-hydrogen", name: "Gemini 4 Hydrogen" },
+          { id: "gpt-5-custom", name: "GPT-5 Custom" },
+        ],
+        tier: { id: "g1-pro-tier", name: "Google AI Pro" },
+      }),
+      readAcpCredential: async () => ({
+        source: "keyring",
+        accessToken: "fresh-acp-tok",
+        refreshToken: "acp-refresh",
+        email: "acp-user@example.com",
+        expired: false,
+        hasRefresh: true,
+      }),
+      retrieveUserQuotaSummary: async () => ({
+        groups: [
+          {
+            displayName: "Gemini Models",
+            buckets: [{ bucketId: "gemini-weekly", window: "weekly", remainingFraction: 0.8 }],
+          },
+          {
+            displayName: "Claude and GPT models",
+            buckets: [{ bucketId: "3p-weekly", window: "weekly", remainingFraction: 1 }],
+          },
+          {
+            displayName: "Retired Models",
+            buckets: [{ bucketId: "gemini-retired-weekly", window: "weekly", remainingFraction: 0, modelIds: ["gemini-1.0-retired"] }],
+          },
+        ],
+      }),
+    },
+  });
+  const [geminiGroup, thirdPartyGroup, retiredGroup] = status.accounts[0].usage.groups;
+  assert.equal(geminiGroup.available, true);
+  assert.ok(geminiGroup.modelIds.includes("gemini-4-hydrogen"));
+  assert.equal(thirdPartyGroup.available, true);
+  assert.ok(thirdPartyGroup.modelIds.includes("gpt-5-custom"));
+  assert.equal(retiredGroup.available, false);
 }
 
 console.log("acp quota offline: ok");
